@@ -13,7 +13,8 @@ class DataStore {
         const defaults = {
             users: {}, 
             sites: {}, 
-            signins: []
+            signins: [],
+            trades: ['General Labour', 'Electrician', 'Plumber', 'Carpenter', 'Machine Operator', 'Scaffolder', 'Steel Fixer', 'Supervisor', 'Other']
         };
 
         if (!raw) {
@@ -33,16 +34,39 @@ class DataStore {
             return {
                 users: data.users || {},
                 sites: data.sites || {},
-                signins: data.signins || []
+                signins: data.signins || [],
+                trades: data.trades || []
             };
         } catch (e) {
             console.error('[STORE] DATA CORRUPTION DETECTED, RESETTING...');
-            return { users: {}, sites: {}, signins: [] };
+            return { users: {}, sites: {}, signins: [], trades: [] };
         }
     }
 
     saveRaw(data) {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Trade Management
+    getTrades() {
+        return this.getRaw().trades;
+    }
+
+    addTrade(tradeName) {
+        const data = this.getRaw();
+        if (!data.trades.includes(tradeName)) {
+            data.trades.push(tradeName);
+            data.trades.sort();
+            this.saveRaw(data);
+            return true;
+        }
+        return false;
+    }
+
+    deleteTrade(tradeName) {
+        const data = this.getRaw();
+        data.trades = data.trades.filter(t => t !== tradeName);
+        this.saveRaw(data);
     }
 
     // User Management

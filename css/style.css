@@ -7,8 +7,6 @@
     --font-main: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --glass-border: rgba(255, 255, 255, 0.1);
-    --bracket-size: 20px;
-    --bracket-width: 3px;
 }
 
 * {
@@ -163,57 +161,9 @@ main {
 }
 
 .view-container {
-    width: 100%;
-}
-
-/* Viewfinder Brackets */
-.view-container {
     position: relative;
     padding: 40px;
     width: 100%;
-}
-
-.view-container::before,
-.view-container::after,
-.view-container > div::before,
-.view-container > div::after {
-    content: "";
-    position: absolute;
-    width: var(--bracket-size);
-    height: var(--bracket-size);
-    border-color: var(--electric-yellow);
-    border-style: solid;
-    opacity: 0.4;
-    pointer-events: none;
-    z-index: 10;
-}
-
-/* Top Left */
-.view-container::before {
-    top: 0;
-    left: 0;
-    border-width: var(--bracket-width) 0 0 var(--bracket-width);
-}
-
-/* Top Right */
-.view-container::after {
-    top: 0;
-    right: 0;
-    border-width: var(--bracket-width) var(--bracket-width) 0 0;
-}
-
-/* Bottom Left */
-.view-container > div::before {
-    bottom: 0;
-    left: 0;
-    border-width: 0 0 var(--bracket-width) var(--bracket-width);
-}
-
-/* Bottom Right */
-.view-container > div::after {
-    bottom: 0;
-    right: 0;
-    border-width: 0 var(--bracket-width) var(--bracket-width) 0;
 }
 
 .section-title {
@@ -317,7 +267,6 @@ label {
     overflow: hidden;
     background: var(--electric-yellow);
     color: var(--night-black);
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
     border: 1px solid rgba(255, 215, 0, 0.5);
 }
 
@@ -339,7 +288,6 @@ label {
 }
 
 .rugged-button.primary:hover {
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
     background: #ffea00;
 }
 
@@ -390,6 +338,18 @@ label {
     background: rgba(255, 255, 255, 0.15);
 }
 
+.choice-btn.selected[data-value="yes"] {
+    background: var(--success-green);
+    color: var(--night-black);
+    border-color: var(--success-green);
+}
+
+.choice-btn.selected[data-value="no"] {
+    background: var(--hazard-red);
+    color: white;
+    border-color: var(--hazard-red);
+}
+
 .rugged-button.small {
     width: auto;
     padding: 8px 18px;
@@ -401,13 +361,27 @@ label {
     font-size: 1.1rem;
 }
 
-/* Special Warning/Success Cards */
-.rugged-card.warning {
-    border-left: 6px solid var(--electric-yellow);
+.rugged-card.warning,
+.rugged-card.success {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    z-index: 1000;
+    margin: 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-.rugged-card.success {
-    border-left: 6px solid var(--success-green);
+@keyframes modalPop {
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.rugged-card.warning.hidden,
+.rugged-card.success.hidden {
+    display: none;
+    opacity: 0;
 }
 
 .hazard-text {

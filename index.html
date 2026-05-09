@@ -17,6 +17,7 @@
     <header class="rugged-header">
         <h1>CONSTRUCTION HUB</h1>
         <div class="header-controls">
+            <button id="nav-dashboard-btn" class="rugged-button small secondary hidden" onclick="window.location.hash='#admin-sites'">DASHBOARD</button>
             <button id="nav-login-btn" class="rugged-button small primary">LOGIN</button>
             <div id="status-bar" class="status-bar">
                 SYSTEM READY // <span id="current-time">00:00</span>
@@ -131,26 +132,64 @@
                     </table>
                 </div>
 
-                <div class="no-print screen-controls" style="margin-top: 2rem;">
+                <div class="no-print screen-controls" style="margin-top: 2rem; display: flex; gap: 10px;">
                     <button class="rugged-button secondary" id="back-to-dashboard">BACK TO DASHBOARD</button>
+                    <button class="rugged-button primary" id="export-csv-btn">
+                        <i class="fas fa-file-csv"></i> EXPORT TO CSV
+                    </button>
                 </div>
             </div>
         </section>
     </template>
 
-    <template id="tpl-admin-dashboard">
+    <template id="tpl-admin-sites">
         <section class="view admin-dashboard">
-            <h2 class="section-title">DASHBOARD</h2>
+            <h2 class="section-title">MANAGED SITES</h2>
 
             <nav class="tactical-tabs">
-                <button id="tab-setup" class="tab-btn active">
+                <button class="tab-btn active" onclick="window.location.hash='#admin-sites'">
+                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-setup'">
                     <i class="fas fa-tools"></i> SITE SETUP
                 </button>
-                <button id="tab-sites" class="tab-btn">
-                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                <button class="tab-btn" onclick="window.location.hash='#admin-trades'">
+                    <i class="fas fa-tags"></i> TRADES
                 </button>
             </nav>
             
+            <div id="active-sites-view" class="tab-content">
+                <div id="active-sites-container" class="tactical-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 class="sidebar-title" style="margin-bottom: 0;">CURRENT SITES</h3>
+                        <button id="enable-notifications-btn" class="rugged-button small primary" style="margin: 0; width: auto; font-size: 0.6rem;">
+                            <i class="fas fa-bell"></i> ENABLE SITE ALERTS
+                        </button>
+                    </div>
+                    <div id="active-sites-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Sites injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-admin-setup">
+        <section class="view admin-dashboard">
+            <h2 class="section-title">SITE SETUP</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn" onclick="window.location.hash='#admin-sites'">
+                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                </button>
+                <button class="tab-btn active" onclick="window.location.hash='#admin-setup'">
+                    <i class="fas fa-tools"></i> SITE SETUP
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-trades'">
+                    <i class="fas fa-tags"></i> TRADES
+                </button>
+            </nav>
+
             <div id="setup-view" class="tab-content">
                 <div class="tactical-container">
                     <h3 class="sidebar-title">GENERATE NEW SITE</h3>
@@ -199,12 +238,36 @@
                     </form>
                 </div>
             </div>
+        </section>
+    </template>
 
-            <div id="active-sites-view" class="tab-content hidden">
-                <div id="active-sites-container" class="tactical-container">
-                    <h3 class="sidebar-title">MANAGED SITES</h3>
-                    <div id="active-sites-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
-                        <!-- Sites injected here -->
+    <template id="tpl-admin-trades">
+        <section class="view admin-dashboard">
+            <h2 class="section-title">TRADE MANAGEMENT</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn" onclick="window.location.hash='#admin-sites'">
+                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-setup'">
+                    <i class="fas fa-tools"></i> SITE SETUP
+                </button>
+                <button class="tab-btn active" onclick="window.location.hash='#admin-trades'">
+                    <i class="fas fa-tags"></i> TRADES
+                </button>
+            </nav>
+
+            <div id="trades-view" class="tab-content">
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">MANAGE TRADE LIST</h3>
+                    
+                    <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 2rem;">
+                        <input type="text" id="new-trade-name" class="rugged-input" placeholder="ENTER NEW TRADE NAME" style="flex: 1;">
+                        <button id="add-trade-btn" class="rugged-button primary small" style="margin-bottom: 0; width: auto;">ADD TRADE</button>
+                    </div>
+
+                    <div id="trades-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                        <!-- Trades injected here -->
                     </div>
                 </div>
             </div>
@@ -244,6 +307,21 @@
                         <input type="text" id="company" required class="rugged-input">
                     </div>
                     <div class="form-group">
+                        <label>TRADE / DISCIPLINE</label>
+                        <select id="trade-type" required class="rugged-input">
+                            <option value="" disabled selected>-- SELECT TRADE --</option>
+                            <option value="General Labour">General Labour</option>
+                            <option value="Electrician">Electrician</option>
+                            <option value="Plumber">Plumber</option>
+                            <option value="Carpenter">Carpenter</option>
+                            <option value="Operator">Machine Operator</option>
+                            <option value="Scaffolder">Scaffolder</option>
+                            <option value="Steel Fixer">Steel Fixer</option>
+                            <option value="Supervisor">Supervisor / Management</option>
+                            <option value="Other">Other / Specialist</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>HAVE YOU BEEN ORIENTATED TO THIS SITE?</label>
                         <div class="radio-group">
                             <button type="button" class="rugged-button choice-btn" data-value="yes">YES</button>
@@ -255,6 +333,7 @@
             </div>
             <div id="orientation-warning" class="rugged-card warning hidden">
                 <h3 class="hazard-text">GO TO SITE OFFICE</h3>
+                <p class="warning-subtext" style="color: var(--hazard-red); font-weight: 800; margin-bottom: 0.5rem;">YOU CANNOT WORK ON THIS SITE WITHOUT BEING ORIENTATED.</p>
                 <p class="warning-subtext">Report to the location shown below for orientation.</p>
                 <div class="image-gallery">
                     <div>
@@ -266,12 +345,19 @@
                         <img id="display-office-photo" src="" alt="Site Office">
                     </div>
                 </div>
-                <button id="warning-reload-btn" class="rugged-button">RELOAD</button>
+                <button id="warning-back-btn" class="rugged-button primary">BACK TO SITE SELECTION</button>
             </div>
             <div id="success-msg" class="rugged-card success hidden">
+                <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--success-green); margin-bottom: 1rem;"></i>
                 <h3>SIGNED IN SUCCESSFULLY</h3>
+                <div id="signin-summary" style="margin: 1.5rem 0; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; text-align: left;">
+                    <p style="font-size: 0.8rem; color: #888;">VISITOR DETAILS:</p>
+                    <p><strong>NAME:</strong> <span id="summary-name"></span></p>
+                    <p><strong>COMPANY:</strong> <span id="summary-company"></span></p>
+                    <p><strong>TIME:</strong> <span id="summary-time"></span></p>
+                </div>
                 <p>Stay safe on site today.</p>
-                <button id="success-back-btn" class="rugged-button">BACK</button>
+                <button id="success-done-btn" class="rugged-button primary" style="margin-top: 1rem;">DONE</button>
             </div>
         </section>
     </template>
