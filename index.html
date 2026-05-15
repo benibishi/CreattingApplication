@@ -274,6 +274,151 @@
         </section>
     </template>
 
+    <template id="tpl-it-admin">
+        <section class="view it-admin-dashboard">
+            <h2 class="section-title">IT ADMIN CONTROL PANEL</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn active" data-tab="it-overview">
+                    <i class="fas fa-chart-line"></i> OVERVIEW
+                </button>
+                <button class="tab-btn" data-tab="it-supervisors">
+                    <i class="fas fa-user-shield"></i> SUPERVISORS
+                </button>
+                <button class="tab-btn" data-tab="it-sites">
+                    <i class="fas fa-map-marked-alt"></i> ALL SITES
+                </button>
+                <button class="tab-btn" data-tab="it-system">
+                    <i class="fas fa-server"></i> SYSTEM
+                </button>
+            </nav>
+
+            <!-- Overview Tab -->
+            <div id="it-overview" class="tab-content">
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div class="rugged-card stat-card">
+                        <span class="label">TOTAL SITES</span>
+                        <span id="stat-total-sites" class="count-value">0</span>
+                    </div>
+                    <div class="rugged-card stat-card">
+                        <span class="label">SUPERVISORS</span>
+                        <span id="stat-total-users" class="count-value">0</span>
+                    </div>
+                    <div class="rugged-card stat-card">
+                        <span class="label">TODAY'S SIGN-INS</span>
+                        <span id="stat-today-signins" class="count-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">GLOBAL ACTIVITY FEED</h3>
+                    <div class="log-table-container">
+                        <table class="rugged-table">
+                            <thead>
+                                <tr>
+                                    <th>SITE</th>
+                                    <th>WORKER</th>
+                                    <th>COMPANY</th>
+                                    <th>TIME</th>
+                                </tr>
+                            </thead>
+                            <tbody id="global-activity-feed">
+                                <!-- Entries injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supervisors Tab -->
+            <div id="it-supervisors" class="tab-content hidden">
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">REGISTERED SUPERVISORS</h3>
+                    <div class="log-table-container">
+                        <table class="rugged-table">
+                            <thead>
+                                <tr>
+                                    <th>USERNAME</th>
+                                    <th>CREATED</th>
+                                    <th>ROLE</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="it-users-list">
+                                <!-- Users injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Sites Tab -->
+            <div id="it-sites" class="tab-content hidden">
+                <div class="tactical-container" style="margin-bottom: 2rem;">
+                    <h3 class="sidebar-title">CREATE SITE FOR SUPERVISOR</h3>
+                    <form id="it-site-create-form" class="setup-grid">
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label>ASSIGN TO SUPERVISOR</label>
+                                <select id="it-site-owner" required class="rugged-input">
+                                    <option value="" disabled selected>-- SELECT SUPERVISOR --</option>
+                                    <!-- Options injected here -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>SITE NAME</label>
+                                <input type="text" id="it-site-name" required class="rugged-input">
+                            </div>
+                        </div>
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label>CONTACT EMAIL</label>
+                                <input type="email" id="it-site-email" required class="rugged-input">
+                            </div>
+                            <button type="submit" class="rugged-button primary" style="margin-top: 1.5rem;">CREATE SITE</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">MANAGED SITES</h3>
+                    <div class="log-table-container">
+                        <table class="rugged-table">
+                            <thead>
+                                <tr>
+                                    <th>SITE NAME</th>
+                                    <th>OWNER</th>
+                                    <th>CREATED</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="it-sites-list">
+                                <!-- Sites injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Tab -->
+            <div id="it-system" class="tab-content hidden">
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">DATA MANAGEMENT</h3>
+                    <p style="margin-bottom: 2rem; color: #aaa;">Export all system data to a JSON file for backup or restore it from a previously saved file.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="it-export-btn" class="rugged-button secondary">
+                            <i class="fas fa-download"></i> EXPORT BACKUP
+                        </button>
+                        <label class="rugged-button primary" style="width: auto; cursor: pointer;">
+                            <i class="fas fa-upload"></i> RESTORE FROM BACKUP
+                            <input type="file" id="it-restore-input" accept=".json" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
     <template id="tpl-poster">
         <section class="view poster-view">
             <div class="poster-container print-only">

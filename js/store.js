@@ -23,7 +23,30 @@ class DataStore {
             // Migration: Ensure all keys exist if the storage already has some data
             const current = JSON.parse(raw);
             const migrated = { ...defaults, ...current };
+            
+            // Migration: Ensure all existing users have a role
+            Object.values(migrated.users).forEach(user => {
+                if (!user.role) user.role = 'supervisor';
+            });
+
             this.saveRaw(migrated);
+        }
+
+        // Create default IT Admin if not exists
+        this.createITAdmin();
+    }
+
+    createITAdmin() {
+        const data = this.getRaw();
+        if (!data.users['itadmin']) {
+            data.users['itadmin'] = {
+                username: 'itadmin',
+                pin: 'admin123',
+                role: 'it-admin',
+                createdAt: new Date().toISOString()
+            };
+            this.saveRaw(data);
+            console.log('[STORE] DEFAULT IT ADMIN CREATED');
         }
     }
 
@@ -70,13 +93,14 @@ class DataStore {
     }
 
     // User Management
-    createUser(username, pin, profileData = {}) {
+    createUser(username, pin, profileData = {}, role = 'supervisor') {
         const data = this.getRaw();
         const normalizedUser = username.trim().toLowerCase();
         if (data.users[normalizedUser]) return { success: false, message: 'USERNAME ALREADY EXISTS' };
         data.users[normalizedUser] = { 
             username: normalizedUser, 
             pin,
+            role,
             ...profileData,
             createdAt: new Date().toISOString()
         };
@@ -148,6 +172,49 @@ class DataStore {
 
     getAllSites() {
         return Object.values(this.getRaw().sites);
+    }
+
+    getAllUsers() {
+        return Object.values(this.getRaw().users);
+    }
+
+    deleteUser(username) {
+        const data = this.getRaw();
+        const normalizedUser = username.trim().toLowerCase();
+        
+        // Remove user
+        delete data.users[normalizedUser];
+        
+        // Remove sites owned by this user
+        const siteIdsToDelete = Object.values(data.sites)
+            .filter(s => s.ownerId === normalizedUser)
+            .map(s => s.id);
+            
+        siteIdsToDelete.forEach(id => {
+            delete data.sites[id];
+            data.signins = data.signins.filter(s => s.siteId !== id);
+        });
+        
+        this.saveRaw(data);
+    }
+
+    getAllSignIns() {
+        return this.getRaw().signins;
+    }
+
+    restoreData(jsonData) {
+        try {
+            const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+            // Basic validation
+            if (data.users && data.sites && data.trades) {
+                this.saveRaw(data);
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error('[STORE] RESTORE FAILED:', e);
+            return false;
+        }
     }
 }
 

@@ -28,7 +28,7 @@ const UI = {
 
     updateNav() {
         const hash = window.location.hash;
-        const isDashboardPage = ['#admin-sites', '#admin-setup', '#admin-trades'].includes(hash);
+        const isDashboardPage = ['#admin-sites', '#admin-setup', '#admin-trades', '#it-admin'].includes(hash);
 
         if (currentUser) {
             this.loginNavBtn.textContent = `LOGOUT (${currentUser.username})`;
@@ -41,6 +41,9 @@ const UI = {
             // Show dashboard button if logged in AND not on a dashboard page
             if (!isDashboardPage) {
                 this.dashboardNavBtn.classList.remove('hidden');
+                this.dashboardNavBtn.onclick = () => {
+                    window.location.hash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
+                };
             } else {
                 this.dashboardNavBtn.classList.add('hidden');
             }
@@ -83,7 +86,17 @@ function handleRouting() {
             console.warn('[ROUTING] UNAUTHORIZED ACCESS TO DASHBOARD - REDIRECTING');
             return window.location.hash = '#admin-login';
         }
+        // Redirect IT Admin to their dashboard
+        if (currentUser.role === 'it-admin') {
+            return window.location.hash = '#it-admin';
+        }
         renderAdminSites();
+    } else if (hash === '#it-admin') {
+        if (!currentUser || currentUser.role !== 'it-admin') {
+            console.warn('[ROUTING] UNAUTHORIZED ACCESS TO IT DASHBOARD - REDIRECTING');
+            return window.location.hash = '#admin-login';
+        }
+        renderITAdmin();
     } else if (hash === '#admin-setup') {
         if (!currentUser) {
             console.warn('[ROUTING] UNAUTHORIZED ACCESS TO DASHBOARD - REDIRECTING');
@@ -97,11 +110,11 @@ function handleRouting() {
         }
         renderAdminTrades();
     } else if (hash === '#admin-dashboard') {
-        window.location.hash = '#admin-sites';
+        window.location.hash = currentUser && currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
     } else if (hash === '#admin-login' || hash === '#admin-register') {
         if (currentUser) {
             console.log('[ROUTING] USER ALREADY LOGGED IN - REDIRECTING TO DASHBOARD');
-            return window.location.hash = '#admin-sites';
+            return window.location.hash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
         }
         hash === '#admin-login' ? renderAdminLogin() : renderAdminRegister();
     } else if (hash.startsWith('#live-logs-')) {
@@ -121,6 +134,180 @@ function handleRouting() {
         }
     }
     UI.updateNav();
+}
+
+/**
+ * IT ADMIN DASHBOARD
+ */
+function renderITAdmin() {
+    UI.render('tpl-it-admin');
+    
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.add('hidden'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.remove('hidden');
+        };
+    });
+
+    refreshITOverview();
+    refreshITSupervisors();
+    refreshITSites();
+    initITSystem();
+}
+
+function refreshITOverview() {
+    const sites = store.getAllSites();
+    const users = store.getAllUsers().filter(u => u.role === 'supervisor');
+    const allSignIns = store.getAllSignIns();
+    
+    // Today's signins
+    const today = new Date().toISOString().split('T')[0];
+    const todaySignIns = allSignIns.filter(s => s.timestamp.startsWith(today));
+
+    document.getElementById('stat-total-sites').textContent = sites.length;
+    document.getElementById('stat-total-users').textContent = users.length;
+    document.getElementById('stat-today-signins').textContent = todaySignIns.length;
+
+    const feed = document.getElementById('global-activity-feed');
+    feed.innerHTML = '';
+    
+    // Show last 20 sign-ins
+    const recent = [...allSignIns].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 20);
+    
+    recent.forEach(s => {
+        const site = store.getSite(s.siteId);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${site ? site.name : 'DELETED SITE'}</td>
+            <td>${s.firstName} ${s.lastName}</td>
+            <td>${s.company}</td>
+            <td>${new Date(s.timestamp).toLocaleTimeString()}</td>
+        `;
+        feed.appendChild(row);
+    });
+}
+
+function refreshITSupervisors() {
+    const users = store.getAllUsers();
+    const list = document.getElementById('it-users-list');
+    list.innerHTML = '';
+
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${user.username}</td>
+            <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+            <td>${user.role.toUpperCase()}</td>
+            <td>
+                ${user.role !== 'it-admin' ? `
+                    <button class="rugged-button hazard-btn small" onclick="deleteSupervisor('${user.username}')">DELETE ACCOUNT</button>
+                ` : '---'}
+            </td>
+        `;
+        list.appendChild(row);
+    });
+
+    window.deleteSupervisor = (username) => {
+        if (confirm(`PERMANENTLY DELETE USER "${username}" AND ALL THEIR SITES?`)) {
+            store.deleteUser(username);
+            refreshITSupervisors();
+            refreshITOverview();
+            refreshITSites();
+        }
+    };
+}
+
+function refreshITSites() {
+    const sites = store.getAllSites();
+    const supervisors = store.getAllUsers().filter(u => u.role === 'supervisor');
+    const list = document.getElementById('it-sites-list');
+    const ownerSelect = document.getElementById('it-site-owner');
+    
+    list.innerHTML = '';
+    ownerSelect.innerHTML = '<option value="" disabled selected>-- SELECT SUPERVISOR --</option>';
+
+    supervisors.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.username;
+        opt.textContent = s.username.toUpperCase();
+        ownerSelect.appendChild(opt);
+    });
+
+    sites.forEach(site => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${site.name}</td>
+            <td>${site.ownerId}</td>
+            <td>${new Date(site.createdAt).toLocaleDateString()}</td>
+            <td>
+                <button class="rugged-button hazard-btn small" onclick="itDeleteSite('${site.id}')">DELETE SITE</button>
+            </td>
+        `;
+        list.appendChild(row);
+    });
+
+    const form = document.getElementById('it-site-create-form');
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        const owner = document.getElementById('it-site-owner').value;
+        const name = document.getElementById('it-site-name').value;
+        const email = document.getElementById('it-site-email').value;
+
+        // Use a placeholder map/office for IT-created sites
+        const placeholderImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        
+        store.createSite({
+            name, email, map: placeholderImg, office: placeholderImg
+        }, owner);
+
+        form.reset();
+        refreshITSites();
+        refreshITOverview();
+    };
+
+    window.itDeleteSite = (siteId) => {
+        if (confirm("DELETE THIS SITE?")) {
+            store.deleteSite(siteId);
+            refreshITSites();
+            refreshITOverview();
+        }
+    };
+}
+
+function initITSystem() {
+    const exportBtn = document.getElementById('it-export-btn');
+    const restoreInp = document.getElementById('it-restore-input');
+
+    exportBtn.onclick = () => {
+        const data = localStorage.getItem(store.STORAGE_KEY);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `SITE_SECURE_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    };
+
+    restoreInp.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (store.restoreData(event.target.result)) {
+                alert("SYSTEM RESTORE SUCCESSFUL");
+                window.location.reload();
+            } else {
+                alert("RESTORE FAILED: INVALID BACKUP FILE");
+            }
+        };
+        reader.readAsText(file);
+    };
 }
 
 /**
