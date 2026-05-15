@@ -28,7 +28,6 @@ const UI = {
 
     updateNav() {
         const hash = window.location.hash;
-        const isDashboardPage = ['#admin-sites', '#admin-setup', '#admin-trades', '#it-admin'].includes(hash);
 
         if (currentUser) {
             this.loginNavBtn.textContent = `LOGOUT (${currentUser.username})`;
@@ -38,11 +37,11 @@ const UI = {
                 this.updateNav();
             };
             
-            // Show dashboard button if logged in AND not on a dashboard page
-            if (!isDashboardPage) {
+            // Show dashboard button ONLY on supervisor dashboard (#admin-sites) when supervisor is logged in
+            if (currentUser.role === 'supervisor' && hash === '#admin-sites') {
                 this.dashboardNavBtn.classList.remove('hidden');
                 this.dashboardNavBtn.onclick = () => {
-                    window.location.hash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
+                    window.location.hash = '#admin-sites';
                 };
             } else {
                 this.dashboardNavBtn.classList.add('hidden');
@@ -671,7 +670,9 @@ function renderPoster(siteId) {
     const site = store.getSite(siteId);
     UI.render('tpl-poster');
     document.getElementById('poster-site-name').textContent = site.name;
-    document.getElementById('back-to-admin').onclick = () => window.location.hash = '#admin-sites';
+    // Redirect back to appropriate dashboard based on user role
+    const dashboardHash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
+    document.getElementById('back-to-admin').onclick = () => window.location.hash = dashboardHash;
     document.getElementById('preview-site').onclick = () => window.location.hash = `#${siteId}`;
 
     const url = `${window.location.origin}${window.location.pathname}#${siteId}`;
@@ -687,7 +688,9 @@ function renderLiveLogs(siteId) {
     
     UI.render('tpl-live-logs');
     document.getElementById('log-count').textContent = signins.length;
-    document.getElementById('back-to-dashboard').onclick = () => window.location.hash = '#admin-sites';
+    // Redirect back to appropriate dashboard based on user role
+    const dashboardHash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
+    document.getElementById('back-to-dashboard').onclick = () => window.location.hash = dashboardHash;
 
     // Update Favicon with headcount
     updateDynamicFavicon(signins.length);
