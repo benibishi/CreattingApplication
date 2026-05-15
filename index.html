@@ -137,7 +137,7 @@
                 </div>
 
                 <div class="no-print screen-controls" style="margin-top: 2rem; display: flex; gap: 10px;">
-                    <button class="rugged-button secondary" id="back-to-dashboard">BACK TO DASHBOARD</button>
+                    <button class="rugged-button secondary" id="back-to-dashboard" onclick="goBackToDashboard()">BACK TO DASHBOARD</button>
                     <button class="rugged-button primary" id="export-csv-btn">
                         <i class="fas fa-file-csv"></i> EXPORT TO CSV
                     </button>
@@ -433,7 +433,7 @@
             <div class="no-print screen-controls">
                 <button class="rugged-button primary" id="preview-site">PREVIEW SIGN-IN PAGE</button>
                 <button class="rugged-button secondary" onclick="window.print()">PRINT POSTER</button>
-                <button class="rugged-button" id="back-to-admin">BACK TO DASHBOARD</button>
+                <button class="rugged-button" id="back-to-admin" onclick="goBackToDashboard()">BACK TO DASHBOARD</button>
             </div>
         </section>
     </template>
