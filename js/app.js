@@ -670,9 +670,7 @@ function renderPoster(siteId) {
     const site = store.getSite(siteId);
     UI.render('tpl-poster');
     document.getElementById('poster-site-name').textContent = site.name;
-    // Redirect back to appropriate dashboard based on user role
-    const dashboardHash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
-    document.getElementById('back-to-admin').onclick = () => window.location.hash = dashboardHash;
+    // Redirect back to appropriate dashboard based on user role - handled by inline onclick
     document.getElementById('preview-site').onclick = () => window.location.hash = `#${siteId}`;
 
     const url = `${window.location.origin}${window.location.pathname}#${siteId}`;
@@ -682,6 +680,12 @@ function renderPoster(siteId) {
 /**
  * LIVE LOG VIEWER
  */
+function goBackToDashboard() {
+    // Redirect back to appropriate dashboard based on user role
+    const dashboardHash = currentUser && currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
+    window.location.hash = dashboardHash;
+}
+
 function renderLiveLogs(siteId) {
     const site = store.getSite(siteId);
     const signins = store.getSignInsForSite(siteId);
