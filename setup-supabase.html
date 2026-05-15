@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#2563eb">
+    <title>SiteTracker - Supabase Setup</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 2rem auto; padding: 1rem; line-height: 1.6; }
+        .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { color: #1f2937; }
+        h2 { color: #2563eb; margin-top: 0; }
+        code { background: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+        .step { margin-bottom: 1.5rem; }
+        .btn { display: inline-block; background: #2563eb; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 1rem; }
+        .btn:hover { background: #1d4ed8; }
+        .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; margin: 1rem 0; }
+        ul { padding-left: 1.5rem; }
+        li { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Supabase Setup Guide</h1>
+    
+    <div class="card">
+        <h2>Step 1: Install Supabase CLI</h2>
+        <div class="step">
+            <p>Open your terminal and run:</p>
+            <code>npm install -g supabase</code>
+            <p>Or if you have Docker Desktop installed, you can skip to Step 3.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Step 2: Initialize Project</h2>
+        <div class="step">
+            <p>In your project folder, run:</p>
+            <code>supabase init</code>
+            <p>This creates a <code>supabase</code> folder with configuration files.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Step 3: Start Local Server</h2>
+        <div class="step">
+            <p>Run the local Supabase stack:</p>
+            <code>supabase start</code>
+            <p>This will start PostgreSQL, Auth, Storage, and the Dashboard locally.</p>
+            <p class="warning">⚠️ Requires Docker Desktop to be running!</p>
+            <p>Once started, you'll see URLs like:</p>
+            <ul>
+                <li>API URL: <code>http://localhost:54321</code></li>
+                <li>Dashboard: <code>http://localhost:54323</code></li>
+                <li>Anon Key: (shown in terminal)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Step 4: Apply Database Schema</h2>
+        <div class="step">
+            <p>Copy the contents of <code>schema.sql</code> and run it in the SQL Editor:</p>
+            <ol>
+                <li>Go to <code>http://localhost:54323</code></li>
+                <li>Navigate to SQL Editor</li>
+                <li>Paste the schema and click Run</li>
+            </ol>
+            <p>Or run via CLI:</p>
+            <code>supabase db reset</code>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Step 5: Update App Configuration</h2>
+        <div class="step">
+            <p>Create a file called <code>config.js</code> in your project root:</p>
+<pre><code>const SUPABASE_URL = 'http://localhost:54321';
+const SUPABASE_ANON_KEY = 'your-anon-key-from-terminal';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</code></pre>
+            <p>Then include the Supabase client in your HTML before your app script:</p>
+            <code>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"&gt;&lt;/script&gt;</code>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Next Steps</h2>
+        <ul>
+            <li>Replace localStorage calls with Supabase queries</li>
+            <li>Implement authentication using Supabase Auth</li>
+            <li>Test locally before deploying to cloud</li>
+        </ul>
+        <a href="http://localhost:54323" class="btn" target="_blank">Open Local Dashboard</a>
+    </div>
+
+    <script>
+        // Auto-detect if running in browser vs file
+        if (window.location.protocol === 'file:') {
+            console.log('Opening from file system - setup instructions displayed');
+        }
+    </script>
+</body>
+</html>
