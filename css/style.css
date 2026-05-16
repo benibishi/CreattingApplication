@@ -58,6 +58,10 @@ body::before {
     opacity: 0.3;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* Header & Navigation */
 .rugged-header {
     background: rgba(15, 17, 21, 0.95);

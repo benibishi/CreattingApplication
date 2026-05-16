@@ -28,6 +28,13 @@ const UI = {
 
     updateNav() {
         const hash = window.location.hash;
+        
+        // Define views that should show the Dashboard shortcut
+        const dashboardPrefixes = ['#admin-', '#it-admin', '#live-logs-', '#poster-'];
+        const excludedViews = ['#admin-login', '#admin-register'];
+        
+        const isDashboardView = dashboardPrefixes.some(p => hash.startsWith(p)) && 
+                                !excludedViews.includes(hash);
 
         if (currentUser) {
             this.loginNavBtn.textContent = `LOGOUT (${currentUser.username})`;
@@ -37,11 +44,11 @@ const UI = {
                 this.updateNav();
             };
             
-            // Show dashboard button ONLY on supervisor dashboard (#admin-sites) when supervisor is logged in
-            if (currentUser.role === 'supervisor' && hash === '#admin-sites') {
+            // Only show Dashboard button when inside supervisor or admin management views
+            if (isDashboardView) {
                 this.dashboardNavBtn.classList.remove('hidden');
                 this.dashboardNavBtn.onclick = () => {
-                    window.location.hash = '#admin-sites';
+                    window.location.hash = currentUser.role === 'it-admin' ? '#it-admin' : '#admin-sites';
                 };
             } else {
                 this.dashboardNavBtn.classList.add('hidden');
