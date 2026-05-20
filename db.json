@@ -1,0 +1,72 @@
+{
+  "users": [
+    {
+      "id": "u-admin123",
+      "email": "admin@construction.com",
+      "password": "adminpassword",
+      "full_name": "IT Administrator",
+      "role": "it-admin",
+      "created_at": "2026-05-20T00:00:00.000Z"
+    },
+    {
+      "id": "u-hpwwg4m6t",
+      "email": "john@hotmail.comq",
+      "password": "12345",
+      "full_name": "john",
+      "role": "supervisor",
+      "created_at": "2026-05-20T05:29:51.291Z"
+    },
+    {
+      "id": "u-uc5s3h47a",
+      "email": "bentheframer@gmail.com",
+      "password": "12345",
+      "full_name": "ben the framer",
+      "role": "supervisor",
+      "created_at": "2026-05-20T05:32:07.777Z"
+    },
+    {
+      "id": "u-xqhkfhvv4",
+      "email": "ooran@ooran.com",
+      "username": "ooran",
+      "password": "1234",
+      "full_name": "ooran",
+      "role": "supervisor",
+      "created_at": "2026-05-20T05:35:15.437Z"
+    }
+  ],
+  "sites": [
+    {
+      "id": "site-794rsbfpb",
+      "name": "legacy",
+      "email": "ooran@oopran",
+      "map_url": "/uploads/maps/1779255440363_k6c7m.jpg",
+      "office_url": "/uploads/offices/1779255440364_tviau.jpg",
+      "owner_id": "u-xqhkfhvv4",
+      "map_pin_x": null,
+      "map_pin_y": null,
+      "created_at": "2026-05-20T05:37:20.365Z"
+    }
+  ],
+  "signins": [
+    {
+      "id": "log-no49lgprv",
+      "site_id": "site-794rsbfpb",
+      "first_name": "Brn",
+      "last_name": "Djdj",
+      "company": "Ooran Enterprises inc",
+      "trade_type": "Other",
+      "timestamp": "2026-05-20T06:07:32.508Z"
+    }
+  ],
+  "trades": [
+    "General Labour",
+    "Electrician",
+    "Plumber",
+    "Carpenter",
+    "Machine Operator",
+    "Scaffolder",
+    "Steel Fixer",
+    "Supervisor",
+    "Other"
+  ]
+}

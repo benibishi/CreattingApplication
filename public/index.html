@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#0f1115">
+    <title>SITE SIGN-IN | Construction Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Library CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <header class="rugged-header">
+        <h1>CONSTRUCTION HUB</h1>
+        <div class="header-controls">
+            <!-- Tactical Controls -->
+            <div class="tactical-controls no-print">
+                <button id="sound-toggle-btn" class="sound-toggle-btn" title="SOUND TOGGLE">
+                    <i class="fas fa-volume-up"></i> SOUND: ON
+                </button>
+            </div>
+            
+            <button id="nav-profile-btn" class="rugged-button small secondary hidden">PROFILE</button>
+            <button id="nav-login-btn" class="rugged-button small primary">LOGIN</button>
+            <div id="status-bar" class="status-bar">
+                SYSTEM READY // <span id="current-time">00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <main id="app">
+        <!-- Views will be injected here -->
+        <div id="view-container" class="view-container">
+            <div class="loader">INITIALIZING...</div>
+        </div>
+    </main>
+
+    <footer class="rugged-footer">
+        &copy; 2026 SITE-SECURE // RUGGED SYSTEMS
+    </footer>
+
+    <!-- Application Templates -->
+    <template id="tpl-home">
+        <section class="view home-view">
+            <h2 class="section-title">WELCOME</h2>
+            <div class="rugged-card">
+                <p class="large-text">CONSTRUCTION SITE MANAGEMENT SYSTEM</p>
+                <p>Access the supervisor dashboard or sign-in to a specific site via QR code.</p>
+                <div style="margin-top: 2rem;">
+                    <button id="home-login-btn" class="rugged-button primary">ADMIN LOGIN</button>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-admin-pin">
+        <section class="view admin-pin">
+            <h2 class="section-title">SUPERVISOR LOGIN</h2>
+            <div class="rugged-card">
+                <div class="form-group">
+                    <label>USERNAME</label>
+                    <input type="text" id="admin-user-input" class="rugged-input" placeholder="Enter Username">
+                </div>
+                <div class="form-group">
+                    <label>PASSWORD</label>
+                    <div class="pin-input-container">
+                        <input type="password" id="admin-pin-input" placeholder="Enter Password" class="rugged-input">
+                        <button type="button" id="pin-toggle-btn" class="pin-toggle">SHOW</button>
+                    </div>
+                </div>
+                
+                <div id="auth-actions">
+                    <button id="admin-login-btn" class="rugged-button primary">SIGN IN</button>
+                    <p style="text-align: center; margin: 1rem 0; font-size: 0.8rem; color: #888;">NEW SUPERVISOR?</p>
+                    <button id="go-to-register-btn" class="rugged-button secondary small">CREATE NEW ACCOUNT</button>
+                </div>
+
+                <p id="auth-error" class="error-text hidden">INVALID CREDENTIALS // ACCESS DENIED</p>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-admin-register">
+        <section class="view admin-register">
+            <h2 class="section-title">CREATE ACCOUNT</h2>
+            <div class="rugged-card">
+                <div class="form-group">
+                    <label>FULL NAME</label>
+                    <input type="text" id="reg-fullname" class="rugged-input" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label>EMAIL ADDRESS</label>
+                    <input type="email" id="reg-email" class="rugged-input" placeholder="supervisor@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>USERNAME</label>
+                    <input type="text" id="reg-username" class="rugged-input" placeholder="Choose a Username" required>
+                </div>
+                <div class="form-group">
+                    <label>PASSWORD</label>
+                    <input type="password" id="reg-password" class="rugged-input" placeholder="Min 4 characters" required>
+                </div>
+                
+                <div id="reg-actions">
+                    <button id="admin-register-btn" class="rugged-button primary">REGISTER & SIGN IN</button>
+                    <button id="back-to-login-btn" class="rugged-button secondary small">BACK TO LOGIN</button>
+                </div>
+
+                <p id="reg-error" class="error-text hidden"></p>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-live-logs">
+        <section class="view live-logs">
+            <h2 class="section-title">LIVE HEADCOUNT</h2>
+            <div class="rugged-card">
+                <div class="headcount-hero">
+                    <span class="label">CURRENT ON SITE:</span>
+                    <span id="log-count" class="count-value">0</span>
+                </div>
+                
+                <div class="log-table-container">
+                    <table class="rugged-table">
+                        <thead>
+                            <tr>
+                                <th>NAME</th>
+                                <th>COMPANY</th>
+                                <th>TIME</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-entries">
+                            <!-- Entries injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="no-print screen-controls" style="margin-top: 2rem; display: flex; gap: 10px;">
+                    <button class="rugged-button secondary" id="back-to-dashboard" onclick="goBackToDashboard()">BACK TO DASHBOARD</button>
+                    <button class="rugged-button primary" id="export-csv-btn">
+                        <i class="fas fa-file-csv"></i> EXPORT TO CSV
+                    </button>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-admin-sites">
+        <section class="view admin-dashboard">
+            <h2 class="section-title">MANAGED SITES</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn active" onclick="window.location.hash='#admin-sites'">
+                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-setup'">
+                    <i class="fas fa-tools"></i> SITE SETUP
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-trades'">
+                    <i class="fas fa-tags"></i> TRADES
+                </button>
+            </nav>
+            
+            <div id="active-sites-view" class="tab-content">
+                <div id="active-sites-container" class="tactical-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 class="sidebar-title" style="margin-bottom: 0;">CURRENT SITES</h3>
+                        <button id="enable-notifications-btn" class="rugged-button small primary" style="margin: 0; width: auto; font-size: 0.6rem;">
+                            <i class="fas fa-bell"></i> ENABLE SITE ALERTS
+                        </button>
+                    </div>
+                    <div id="active-sites-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Sites injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-admin-setup">
+        <section class="view admin-dashboard">
+            <h2 class="section-title">SITE SETUP</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn" onclick="window.location.hash='#admin-sites'">
+                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                </button>
+                <button class="tab-btn active" onclick="window.location.hash='#admin-setup'">
+                    <i class="fas fa-tools"></i> SITE SETUP
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-trades'">
+                    <i class="fas fa-tags"></i> TRADES
+                </button>
+            </nav>
+
+            <div id="setup-view" class="tab-content">
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">GENERATE NEW SITE</h3>
+                    <form id="site-setup-form">
+                        <div class="setup-grid">
+                            <div class="form-column">
+                                <div class="floating-group">
+                                    <i class="fas fa-map-marker-alt field-icon"></i>
+                                    <input type="text" id="site-name" required class="rugged-input floating-input" placeholder=" ">
+                                    <label class="floating-label">SITE NAME</label>
+                                </div>
+                                <div class="floating-group">
+                                    <i class="fas fa-envelope field-icon"></i>
+                                    <input type="email" id="site-email" required class="rugged-input floating-input" placeholder=" ">
+                                    <label class="floating-label">CONTACT EMAIL</label>
+                                </div>
+                            </div>
+                            <div class="form-column">
+                                <div class="upload-container">
+                                    <label class="modern-upload-btn">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span>SITE MAP</span>
+                                        <input type="file" id="site-map" accept="image/*" required class="hidden-upload">
+                                    </label>
+                                    <div id="site-map-preview" class="file-pill hidden">
+                                        <i class="fas fa-file-image"></i>
+                                        <span class="pill-text"></span>
+                                    </div>
+                                </div>
+                                <div class="upload-container">
+                                    <label class="modern-upload-btn">
+                                        <i class="fas fa-camera"></i>
+                                        <span>OFFICE PHOTO</span>
+                                        <input type="file" id="site-office-photo" accept="image/*" required class="hidden-upload">
+                                    </label>
+                                    <div id="site-office-preview" class="file-pill hidden">
+                                        <i class="fas fa-file-image"></i>
+                                        <span class="pill-text"></span>
+                                    </div>
+                                </div>
+                        </div>
+                        
+                        <div id="map-pinning-section" class="form-group hidden" style="margin-top: 1.5rem;">
+                            <label>TAP SITE MAP TO MARK ORIENTATION OFFICE LOCATION</label>
+                            <div class="interactive-map-wrapper" id="setup-map-wrapper">
+                                <img id="setup-map-image" class="interactive-map-image" src="" alt="Click to place pin">
+                                <div id="setup-map-pin" class="glowing-pin hidden">
+                                    <span class="glowing-pin-label">OFFICE</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="setup-map-pin-x" name="map_pin_x">
+                            <input type="hidden" id="setup-map-pin-y" name="map_pin_y">
+                        </div>
+
+                        <button type="submit" class="rugged-button primary" style="margin-top: 2rem;">
+                            <i class="fas fa-plus-circle" style="margin-right: 10px;"></i>GENERATE SITE ACCESS
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-admin-trades">
+        <section class="view admin-dashboard">
+            <h2 class="section-title">TRADE MANAGEMENT</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn" onclick="window.location.hash='#admin-sites'">
+                    <i class="fas fa-list-ul"></i> ACTIVE SITES
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-setup'">
+                    <i class="fas fa-tools"></i> SITE SETUP
+                </button>
+                <button class="tab-btn active" onclick="window.location.hash='#admin-trades'">
+                    <i class="fas fa-tags"></i> TRADES
+                </button>
+            </nav>
+
+            <div id="trades-view" class="tab-content">
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">MANAGE TRADE LIST</h3>
+                    
+                    <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 2rem;">
+                        <input type="text" id="new-trade-name" class="rugged-input" placeholder="ENTER NEW TRADE NAME" style="flex: 1;">
+                        <button id="add-trade-btn" class="rugged-button primary small" style="margin-bottom: 0; width: auto;">ADD TRADE</button>
+                    </div>
+
+                    <div id="trades-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                        <!-- Trades injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-it-admin">
+        <section class="view it-admin-dashboard">
+            <h2 class="section-title">IT ADMIN CONTROL PANEL</h2>
+
+            <nav class="tactical-tabs">
+                <button class="tab-btn active" data-tab="it-overview">
+                    <i class="fas fa-chart-line"></i> OVERVIEW
+                </button>
+                <button class="tab-btn" data-tab="it-supervisors">
+                    <i class="fas fa-user-shield"></i> SUPERVISORS
+                </button>
+                <button class="tab-btn" data-tab="it-sites">
+                    <i class="fas fa-map-marked-alt"></i> ALL SITES
+                </button>
+                <button class="tab-btn" data-tab="it-system">
+                    <i class="fas fa-server"></i> SYSTEM
+                </button>
+            </nav>
+
+            <!-- Overview Tab -->
+            <div id="it-overview" class="tab-content">
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div class="rugged-card stat-card">
+                        <span class="label">TOTAL SITES</span>
+                        <span id="stat-total-sites" class="count-value">0</span>
+                    </div>
+                    <div class="rugged-card stat-card">
+                        <span class="label">SUPERVISORS</span>
+                        <span id="stat-total-users" class="count-value">0</span>
+                    </div>
+                    <div class="rugged-card stat-card">
+                        <span class="label">TODAY'S SIGN-INS</span>
+                        <span id="stat-today-signins" class="count-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">GLOBAL ACTIVITY FEED</h3>
+                    <div class="log-table-container">
+                        <table class="rugged-table">
+                            <thead>
+                                <tr>
+                                    <th>SITE</th>
+                                    <th>WORKER</th>
+                                    <th>COMPANY</th>
+                                    <th>TIME</th>
+                                </tr>
+                            </thead>
+                            <tbody id="global-activity-feed">
+                                <!-- Entries injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supervisors Tab -->
+            <div id="it-supervisors" class="tab-content hidden">
+                <div class="tactical-container" style="margin-bottom: 2rem;">
+                    <h3 class="sidebar-title">CREATE NEW SUPERVISOR</h3>
+                    <form id="it-user-create-form" class="setup-grid">
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label>FULL NAME</label>
+                                <input type="text" id="it-reg-fullname" class="rugged-input" placeholder="John Doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label>EMAIL ADDRESS</label>
+                                <input type="email" id="it-reg-email" class="rugged-input" placeholder="supervisor@example.com" required>
+                            </div>
+                        </div>
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label>USERNAME</label>
+                                <input type="text" id="it-reg-username" class="rugged-input" placeholder="Choose a Username" required>
+                            </div>
+                            <div class="form-group">
+                                <label>PASSWORD</label>
+                                <input type="text" id="it-reg-password" class="rugged-input" placeholder="Enter Password" required>
+                            </div>
+                            <button type="submit" class="rugged-button primary" style="margin-top: 1rem;">CREATE SUPERVISOR</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">REGISTERED SUPERVISORS</h3>
+                    <div class="log-table-container">
+                        <table class="rugged-table">
+                            <thead>
+                                <tr>
+                                    <th>USERNAME / NAME</th>
+                                    <th>PASSWORD</th>
+                                    <th>CREATED</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="it-users-list">
+                                <!-- Users injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Sites Tab -->
+            <div id="it-sites" class="tab-content hidden">
+                <div class="tactical-container" style="margin-bottom: 2rem;">
+                    <h3 class="sidebar-title">CREATE SITE FOR SUPERVISOR</h3>
+                    <form id="it-site-create-form" class="setup-grid">
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label>ASSIGN TO SUPERVISOR</label>
+                                <select id="it-site-owner" required class="rugged-input">
+                                    <option value="" disabled selected>-- SELECT SUPERVISOR --</option>
+                                    <!-- Options injected here -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>SITE NAME</label>
+                                <input type="text" id="it-site-name" required class="rugged-input">
+                            </div>
+                        </div>
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label>CONTACT EMAIL</label>
+                                <input type="email" id="it-site-email" required class="rugged-input">
+                            </div>
+                            <button type="submit" class="rugged-button primary" style="margin-top: 1.5rem;">CREATE SITE</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">MANAGED SITES</h3>
+                    <div class="log-table-container">
+                        <table class="rugged-table">
+                            <thead>
+                                <tr>
+                                    <th>SITE NAME</th>
+                                    <th>OWNER</th>
+                                    <th>CREATED</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="it-sites-list">
+                                <!-- Sites injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Tab -->
+            <div id="it-system" class="tab-content hidden">
+                <div class="tactical-container">
+                    <h3 class="sidebar-title">DATA MANAGEMENT</h3>
+                    <p style="margin-bottom: 2rem; color: #aaa;">Export all system data to a JSON file for backup or restore it from a previously saved file.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="it-export-btn" class="rugged-button secondary">
+                            <i class="fas fa-download"></i> EXPORT BACKUP
+                        </button>
+                        <label class="rugged-button primary" style="width: auto; cursor: pointer;">
+                            <i class="fas fa-upload"></i> RESTORE FROM BACKUP
+                            <input type="file" id="it-restore-input" accept=".json" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-poster">
+        <section class="view poster-view">
+            <div class="poster-container print-only">
+                <h1 id="poster-site-name">SITE NAME</h1>
+                <div id="qrcode-container"></div>
+                <p class="poster-instruction">SCAN TO SIGN-IN</p>
+            </div>
+            <div class="no-print screen-controls">
+                <button class="rugged-button primary" id="preview-site">PREVIEW SIGN-IN PAGE</button>
+                <button class="rugged-button secondary" onclick="window.print()">PRINT POSTER</button>
+                <button class="rugged-button" id="back-to-admin" onclick="goBackToDashboard()">BACK TO DASHBOARD</button>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-signin">
+        <section class="view signin-view">
+            <h2 id="signin-site-name" class="section-title">SITE SIGN-IN</h2>
+            <div class="rugged-card" id="signin-form-container">
+                <form id="signin-form">
+                    <div class="form-group">
+                        <label>FIRST NAME</label>
+                        <input type="text" id="fname" required class="rugged-input">
+                    </div>
+                    <div class="form-group">
+                        <label>LAST NAME</label>
+                        <input type="text" id="lname" required class="rugged-input">
+                    </div>
+                    <div class="form-group">
+                        <label>COMPANY</label>
+                        <input type="text" id="company" required class="rugged-input">
+                    </div>
+                    <div class="form-group">
+                        <label>TRADE / DISCIPLINE</label>
+                        <select id="trade-type" required class="rugged-input">
+                            <option value="" disabled selected>-- SELECT TRADE --</option>
+                            <option value="General Labour">General Labour</option>
+                            <option value="Electrician">Electrician</option>
+                            <option value="Plumber">Plumber</option>
+                            <option value="Carpenter">Carpenter</option>
+                            <option value="Operator">Machine Operator</option>
+                            <option value="Scaffolder">Scaffolder</option>
+                            <option value="Steel Fixer">Steel Fixer</option>
+                            <option value="Supervisor">Supervisor / Management</option>
+                            <option value="Other">Other / Specialist</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>HAVE YOU BEEN ORIENTATED TO THIS SITE?</label>
+                        <div class="radio-group">
+                            <button type="button" class="rugged-button choice-btn" data-value="yes">YES</button>
+                            <button type="button" class="rugged-button choice-btn" data-value="no">NO</button>
+                        </div>
+                    </div>
+                    <button type="submit" id="submit-signin" class="rugged-button primary hidden">SIGN IN</button>
+                </form>
+            </div>
+            <div id="orientation-warning" class="rugged-card warning hidden">
+                <h3 class="hazard-text">GO TO SITE OFFICE</h3>
+                <p class="warning-subtext" style="color: var(--hazard-red); font-weight: 800; margin-bottom: 0.5rem;">YOU CANNOT WORK ON THIS SITE WITHOUT BEING ORIENTATED.</p>
+                <p class="warning-subtext">Report to the location shown below for orientation.</p>
+                <div class="image-gallery">
+                    <div>
+                        <label>SITE MAP</label>
+                        <div class="interactive-map-wrapper">
+                            <img id="display-site-map" class="interactive-map-image" src="" alt="Site Map">
+                            <div id="display-map-pin" class="glowing-pin hidden">
+                                <span class="glowing-pin-label">OFFICE</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label>SITE OFFICE</label>
+                        <img id="display-office-photo" src="" alt="Site Office" style="width: 100%; height: auto; max-height: 220px; object-fit: cover; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    </div>
+                </div>
+                <button id="warning-back-btn" class="rugged-button primary">BACK TO SITE SELECTION</button>
+            </div>
+            <div id="success-msg" class="rugged-card success hidden">
+                <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--success-green); margin-bottom: 1rem;"></i>
+                <h3>SIGNED IN SUCCESSFULLY</h3>
+                <div id="signin-summary" style="margin: 1.5rem 0; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; text-align: left;">
+                    <p style="font-size: 0.8rem; color: #888;">VISITOR DETAILS:</p>
+                    <p><strong>NAME:</strong> <span id="summary-name"></span></p>
+                    <p><strong>COMPANY:</strong> <span id="summary-company"></span></p>
+                    <p><strong>TIME:</strong> <span id="summary-time"></span></p>
+                </div>
+                <p>Stay safe on site today.</p>
+                <button id="success-done-btn" class="rugged-button primary" style="margin-top: 1rem;">DONE</button>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-profile">
+        <section class="view profile-view">
+            <h2 class="section-title">PROFILE SETTINGS</h2>
+            <div class="rugged-card">
+                <form id="profile-form">
+                    <div class="form-group">
+                        <label>FULL NAME</label>
+                        <input type="text" id="profile-fullname" class="rugged-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>USERNAME</label>
+                        <input type="text" id="profile-username" class="rugged-input" readonly style="opacity: 0.7;">
+                    </div>
+                    <div class="form-group">
+                        <label>EMAIL</label>
+                        <input type="email" id="profile-email" class="rugged-input" readonly style="opacity: 0.7;">
+                    </div>
+                    <div class="form-group">
+                        <label>NEW PASSWORD (LEAVE BLANK TO KEEP CURRENT)</label>
+                        <input type="password" id="profile-password" class="rugged-input" placeholder="Enter new password">
+                    </div>
+                    <div class="form-group">
+                        <label>ROLE</label>
+                        <input type="text" id="profile-role" class="rugged-input" readonly style="opacity: 0.7;">
+                    </div>
+                    
+                    <button type="submit" id="save-profile-btn" class="rugged-button primary">SAVE CHANGES</button>
+                    <p id="profile-msg" class="success-text hidden">CHANGES SAVED SUCCESSFULLY</p>
+                    <p id="profile-error" class="error-text hidden">ERROR SAVING CHANGES</p>
+                </form>
+            </div>
+        </section>
+    </template>
+
+    <script src="js/store.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
