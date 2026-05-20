@@ -14,6 +14,7 @@ class DataStore {
     constructor() {
         this.apiBase = '/api';
         this.mode = 'local'; // Default, will be updated by init()
+        this.token = localStorage.getItem('SITE_SECURE_TOKEN');
     }
 
     async init() {
@@ -25,6 +26,14 @@ class DataStore {
         } catch (e) {
             console.error('[STORE] FAILED TO FETCH CONFIG, DEFAULTING TO LOCAL');
         }
+    }
+
+    getHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        return headers;
     }
 
     /**
@@ -46,14 +55,18 @@ class DataStore {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            if (!res.ok) throw new Error('Invalid credentials');
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Login failed');
+            }
             const data = await res.json();
-            return {
-                id: data.user.id,
-                username: data.user.email.split('@')[0],
-                email: data.user.email,
-                role: data.user.role
-            };
+            
+            // Store token
+            this.token = data.token;
+            localStorage.setItem('SITE_SECURE_TOKEN', data.token);
+            sessionStorage.setItem('SITE_SECURE_USER', JSON.stringify(data.user));
+
+            return data.user;
         }
     }
 
@@ -75,7 +88,14 @@ class DataStore {
                 const err = await res.json();
                 throw new Error(err.error || 'Registration failed');
             }
-            return res.json();
+            const data = await res.json();
+            
+            // Store token
+            this.token = data.token;
+            localStorage.setItem('SITE_SECURE_TOKEN', data.token);
+            sessionStorage.setItem('SITE_SECURE_USER', JSON.stringify(data.user));
+
+            return data;
         }
     }
 
@@ -83,7 +103,9 @@ class DataStore {
         if (this.mode === 'supabase') {
             await _supabase.auth.signOut();
         }
-        // Local mode doesn't need a server logout call for this simple implementation
+        this.token = null;
+        localStorage.removeItem('SITE_SECURE_TOKEN');
+        sessionStorage.removeItem('SITE_SECURE_USER');
     }
 
     async getCurrentSession() {
@@ -97,20 +119,28 @@ class DataStore {
                 role: session.user.user_metadata.role || 'supervisor'
             };
         } else {
-            // Simple session persistence for local mode using sessionStorage
             const saved = sessionStorage.getItem('SITE_SECURE_USER');
             return saved ? JSON.parse(saved) : null;
         }
     }
 
     async getAllUsers() {
-        const res = await fetch(`${this.apiBase}/users`);
+        const res = await fetch(`${this.apiBase}/users`, { headers: this.getHeaders() });
+        if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+                this.logout();
+                window.location.hash = '#admin-login';
+            }
+            const err = await res.json();
+            throw new Error(err.error || 'Failed to fetch users');
+        }
         return res.json();
     }
 
     async deleteUser(userId) {
         const res = await fetch(`${this.apiBase}/users/${userId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this.getHeaders()
         });
         return res.ok;
     }
@@ -126,7 +156,7 @@ class DataStore {
     async addTrade(name) {
         const res = await fetch(`${this.apiBase}/trades`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(),
             body: JSON.stringify({ name })
         });
         return res.ok;
@@ -150,16 +180,21 @@ class DataStore {
     async createSite(siteData, ownerId) {
         const res = await fetch(`${this.apiBase}/sites`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(),
             body: JSON.stringify({ ...siteData, owner_id: ownerId })
         });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Failed to create site');
+        }
         const data = await res.json();
         return data.id;
     }
 
     async deleteSite(siteId) {
         const res = await fetch(`${this.apiBase}/sites/${siteId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this.getHeaders()
         });
         return res.ok;
     }
@@ -200,7 +235,7 @@ class DataStore {
         } else {
             const res = await fetch(`${this.apiBase}/users/${userId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(),
                 body: JSON.stringify(updates)
             });
             const data = await res.json();
@@ -218,7 +253,7 @@ class DataStore {
     async setNotificationStatus(userId, enabled) {
         const res = await fetch(`${this.apiBase}/users/${userId}/notifications`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(),
             body: JSON.stringify({ enabled })
         });
         return res.ok;

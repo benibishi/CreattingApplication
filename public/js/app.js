@@ -147,8 +147,10 @@ const SoundEngine = {
  * THEME MANAGER
  */
 const ThemeManager = {
+    theme: 'dark',
+
     init() {
-        // Listen to sound toggle initial state
+        // Sound toggle initial state
         const soundSaved = localStorage.getItem('TACTICAL_SOUND_ENABLED');
         if (soundSaved === 'false') {
             SoundEngine.enabled = false;
@@ -165,6 +167,40 @@ const ThemeManager = {
                 SoundEngine.toggle();
             });
         }
+
+        // Theme toggle initial state
+        const themeSaved = localStorage.getItem('TACTICAL_THEME');
+        if (themeSaved === 'daylight') {
+            this.setTheme('daylight');
+        }
+
+        const themeBtn = document.getElementById('theme-toggle-btn');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                const newTheme = this.theme === 'dark' ? 'daylight' : 'dark';
+                this.setTheme(newTheme);
+                SoundEngine.playClick();
+            });
+        }
+    },
+
+    setTheme(mode) {
+        this.theme = mode;
+        const btn = document.getElementById('theme-toggle-btn');
+        if (mode === 'daylight') {
+            document.documentElement.setAttribute('data-theme', 'daylight');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-moon"></i> DAYLIGHT MODE: ON';
+                btn.classList.remove('off');
+            }
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-sun"></i> DAYLIGHT MODE: OFF';
+                btn.classList.add('off');
+            }
+        }
+        localStorage.setItem('TACTICAL_THEME', mode);
     }
 };
 
@@ -323,6 +359,64 @@ async function refreshITOverview() {
         document.getElementById('stat-total-sites').textContent = sites.length;
         document.getElementById('stat-today-signins').textContent = todaySignIns.length;
         document.getElementById('stat-total-users').textContent = supervisors.length;
+
+        // --- RENDER CHARTS ---
+        
+        // 1. Sign-ins per Site (Bar Chart)
+        const siteLabels = sites.map(s => s.name);
+        const siteData = sites.map(site => allSignIns.filter(log => log.site_id === site.id).length);
+
+        const barCtx = document.getElementById('sites-bar-chart').getContext('2d');
+        if (window.siteBarChart) window.siteBarChart.destroy();
+        window.siteBarChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: siteLabels,
+                datasets: [{
+                    label: 'TOTAL SIGN-INS',
+                    data: siteData,
+                    backgroundColor: 'rgba(255, 174, 0, 0.6)',
+                    borderColor: 'rgba(255, 174, 0, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#aaa' } },
+                    x: { grid: { display: false }, ticks: { color: '#aaa' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // 2. Trade Distribution (Pie Chart)
+        const tradeCounts = {};
+        allSignIns.forEach(log => {
+            tradeCounts[log.trade_type] = (tradeCounts[log.trade_type] || 0) + 1;
+        });
+
+        const pieCtx = document.getElementById('trades-pie-chart').getContext('2d');
+        if (window.tradePieChart) window.tradePieChart.destroy();
+        window.tradePieChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(tradeCounts),
+                datasets: [{
+                    data: Object.values(tradeCounts),
+                    backgroundColor: [
+                        '#ffae00', '#ff6f00', '#ffeb3b', '#4caf50', '#2196f3', '#9c27b0', '#f44336', '#009688'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#aaa', font: { family: 'JetBrains Mono', size: 10 } } }
+                }
+            }
+        });
 
         const feed = document.getElementById('global-activity-feed');
         feed.innerHTML = '';
@@ -985,16 +1079,21 @@ async function renderSignInFlow(siteId) {
 }
 
 async function renderLiveLogs(siteId) {
-    const logs = await store.getSignInsForSite(siteId);
+    let logs = await store.getSignInsForSite(siteId);
     UI.render('tpl-live-logs');
-    document.getElementById('log-count').textContent = logs.length;
     
     const list = document.getElementById('log-entries');
-    logs.forEach(l => {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${l.first_name} ${l.last_name}</td><td>${l.company}</td><td>${new Date(l.timestamp).toLocaleTimeString()}</td>`;
-        list.appendChild(row);
-    });
+    const updateLogDisplay = (data) => {
+        document.getElementById('log-count').textContent = data.length;
+        list.innerHTML = '';
+        data.forEach(l => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${l.first_name} ${l.last_name}</td><td>${l.company}</td><td>${new Date(l.timestamp).toLocaleTimeString()}</td>`;
+            list.appendChild(row);
+        });
+    };
+
+    updateLogDisplay(logs);
 
     // Handle CSV Export
     const exportBtn = document.getElementById('export-csv-btn');
@@ -1004,9 +1103,36 @@ async function renderLiveLogs(siteId) {
                 SoundEngine.playAlarm();
                 return;
             }
+
+            // Simple Date Filter Prompt
+            const startDateStr = prompt("ENTER START DATE (YYYY-MM-DD) OR LEAVE BLANK FOR ALL:", "");
+            const endDateStr = prompt("ENTER END DATE (YYYY-MM-DD) OR LEAVE BLANK FOR ALL:", "");
+
+            let filteredLogs = logs;
+            if (startDateStr) {
+                const start = new Date(startDateStr);
+                filteredLogs = filteredLogs.filter(l => new Date(l.timestamp) >= start);
+            }
+            if (endDateStr) {
+                const end = new Date(endDateStr);
+                end.setHours(23, 59, 59); // End of the day
+                filteredLogs = filteredLogs.filter(l => new Date(l.timestamp) <= end);
+            }
+
+            if (filteredLogs.length === 0) {
+                alert("NO LOGS FOUND FOR THIS DATE RANGE");
+                return;
+            }
+
             const csvRows = [
-                ['Full Name', 'Company', 'Time'],
-                ...logs.map(l => [`${l.first_name} ${l.last_name}`, l.company, new Date(l.timestamp).toLocaleTimeString()])
+                ['Full Name', 'Company', 'Trade', 'Time', 'Date'],
+                ...filteredLogs.map(l => [
+                    `${l.first_name} ${l.last_name}`, 
+                    l.company, 
+                    l.trade_type,
+                    new Date(l.timestamp).toLocaleTimeString(),
+                    new Date(l.timestamp).toLocaleDateString()
+                ])
             ];
             const csvContent = "data:text/csv;charset=utf-8," 
                 + csvRows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");

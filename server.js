@@ -4,16 +4,36 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const STORAGE_MODE = process.env.STORAGE_MODE || 'local';
 const DB_FILE = path.join(__dirname, 'db.json');
+const JWT_SECRET = process.env.JWT_SECRET || 'rugged-construction-secret-123';
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+/**
+ * AUTH MIDDLEWARE
+ */
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: 'Access denied. Token missing.' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid or expired token.' });
+        req.user = user;
+        next();
+    });
+};
 
 // Supabase Initialization
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -83,11 +103,14 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ error: 'Username already taken' });
         }
 
+        // Hash Password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const newUser = {
             id: 'u-' + Math.random().toString(36).substr(2, 9),
             email: cleanEmail,
             username: cleanUsername || cleanEmail.split('@')[0],
-            password, // In a real app, hash this!
+            password: hashedPassword, 
             full_name,
             role: role || 'supervisor',
             created_at: new Date().toISOString()
@@ -95,7 +118,15 @@ app.post('/api/auth/register', async (req, res) => {
 
         db.users.push(newUser);
         saveLocalDB(db);
-        res.json({ user: newUser });
+
+        // Generate Token
+        const token = jwt.sign({ 
+            id: newUser.id, 
+            username: newUser.username, 
+            role: newUser.role 
+        }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({ user: { id: newUser.id, email: newUser.email, username: newUser.username, role: newUser.role, full_name: newUser.full_name }, token });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -108,25 +139,39 @@ app.post('/api/auth/login', async (req, res) => {
         const { email, password } = req.body;
         const db = getLocalDB();
         
-        // Match either the full email, the stored username, or the email split prefix (case-insensitively)
+        const cleanInput = (email || '').trim().toLowerCase();
         const user = db.users.find(u => {
-            const cleanInput = (email || '').trim().toLowerCase();
             const cleanEmail = u.email.trim().toLowerCase();
             const cleanUsername = (u.username || cleanEmail.split('@')[0]).trim().toLowerCase();
-            
-            const matchesIdentifier = (cleanEmail === cleanInput || cleanUsername === cleanInput);
-            return matchesIdentifier && u.password === password;
+            return cleanEmail === cleanInput || cleanUsername === cleanInput;
         });
         
         if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-        res.json({ user });
+
+        // Compare Hashed Password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+
+        // Generate Token
+        const token = jwt.sign({ 
+            id: user.id, 
+            username: user.username, 
+            role: user.role 
+        }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({ 
+            user: { id: user.id, username: user.username, email: user.email, role: user.role, full_name: user.full_name }, 
+            token 
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // USERS: Get all users/supervisors (IT Admin function)
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', authenticateToken, async (req, res) => {
+    // Only IT Admin can list users
+    if (req.user.role !== 'it-admin') return res.status(403).json({ error: 'Forbidden' });
     try {
         if (STORAGE_MODE === 'supabase') {
             const { data: { users }, error } = await supabase.auth.admin.listUsers();
@@ -335,22 +380,78 @@ app.delete('/api/sites/:id', async (req, res) => {
 app.post('/api/signins', async (req, res) => {
     try {
         const { site_id, first_name, last_name, company, trade_type } = req.body;
+        let newLog;
+        let siteName = 'Unknown Site';
+        let ownerId = null;
+
         if (STORAGE_MODE === 'supabase') {
-            const { data, error } = await supabase.from('signins').insert([{ site_id, first_name, last_name, company, trade_type }]).select();
+            const { data, error } = await supabase.from('signins').insert([{ site_id, first_name, last_name, company, trade_type }]).select('*, sites(*)');
             if (error) throw error;
-            res.json(data[0]);
+            newLog = data[0];
+            siteName = newLog.sites.name;
+            ownerId = newLog.sites.owner_id;
         } else {
             const db = getLocalDB();
-            const newLog = {
+            const site = db.sites.find(s => s.id === site_id);
+            siteName = site ? site.name : 'Unknown Site';
+            ownerId = site ? site.owner_id : null;
+
+            newLog = {
                 id: 'log-' + Math.random().toString(36).substr(2, 9),
                 site_id, first_name, last_name, company, trade_type,
                 timestamp: new Date().toISOString()
             };
             db.signins.push(newLog);
             saveLocalDB(db);
-            res.json(newLog);
         }
+
+        // --- EMAIL NOTIFICATION LOGIC ---
+        if (ownerId) {
+            const db = getLocalDB();
+            const owner = db.users.find(u => u.id === ownerId);
+            
+            if (owner && owner.notifications_enabled) {
+                // For development, we'll use a mock Ethereal transporter
+                // In production, use real SMTP credentials from .env
+                const testAccount = await nodemailer.createTestAccount();
+                const transporter = nodemailer.createTransport({
+                    host: "smtp.ethereal.email",
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        user: testAccount.user,
+                        pass: testAccount.pass,
+                    },
+                });
+
+                const mailOptions = {
+                    from: '"SITE-SECURE SYSTEM" <system@site-secure.com>',
+                    to: owner.email,
+                    subject: `NEW SIGN-IN: ${siteName.toUpperCase()}`,
+                    html: `
+                        <div style="font-family: monospace; background: #0f1115; color: #ffae00; padding: 20px; border: 2px solid #ffae00;">
+                            <h2 style="border-bottom: 2px solid #ffae00; padding-bottom: 10px;">TACTICAL ALERT: NEW SITE ENTRY</h2>
+                            <p><strong>SITE:</strong> ${siteName.toUpperCase()}</p>
+                            <p><strong>NAME:</strong> ${first_name.toUpperCase()} ${last_name.toUpperCase()}</p>
+                            <p><strong>COMPANY:</strong> ${company.toUpperCase()}</p>
+                            <p><strong>TRADE:</strong> ${trade_type.toUpperCase()}</p>
+                            <p><strong>TIME:</strong> ${new Date(newLog.timestamp).toLocaleString()}</p>
+                            <div style="margin-top: 20px; font-size: 0.8rem; color: #888;">
+                                SYSTEM LOG ID: ${newLog.id}
+                            </div>
+                        </div>
+                    `
+                };
+
+                const info = await transporter.sendMail(mailOptions);
+                console.log("[NOTIFY] EMAIL SENT: %s", info.messageId);
+                console.log("[NOTIFY] PREVIEW URL: %s", nodemailer.getTestMessageUrl(info));
+            }
+        }
+
+        res.json(newLog);
     } catch (err) {
+        console.error('[ERROR] SIGN-IN / NOTIFY:', err);
         res.status(500).json({ error: err.message });
     }
 });

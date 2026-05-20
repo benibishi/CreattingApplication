@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="css/style.css">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- QR Code Library CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -25,6 +27,9 @@
         <div class="header-controls">
             <!-- Tactical Controls -->
             <div class="tactical-controls no-print">
+                <button id="theme-toggle-btn" class="sound-toggle-btn" title="THEME TOGGLE">
+                    <i class="fas fa-sun"></i> DAYLIGHT MODE: OFF
+                </button>
                 <button id="sound-toggle-btn" class="sound-toggle-btn" title="SOUND TOGGLE">
                     <i class="fas fa-volume-up"></i> SOUND: ON
                 </button>
@@ -332,6 +337,17 @@
                     <div class="rugged-card stat-card">
                         <span class="label">TODAY'S SIGN-INS</span>
                         <span id="stat-today-signins" class="count-value">0</span>
+                    </div>
+                </div>
+
+                <div class="charts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <div class="rugged-card">
+                        <h3 class="sidebar-title">SIGN-INS PER SITE (LAST 7 DAYS)</h3>
+                        <canvas id="sites-bar-chart"></canvas>
+                    </div>
+                    <div class="rugged-card">
+                        <h3 class="sidebar-title">WORKER DISTRIBUTION BY TRADE</h3>
+                        <canvas id="trades-pie-chart"></canvas>
                     </div>
                 </div>
                 
