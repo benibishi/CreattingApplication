@@ -162,6 +162,14 @@ class DataStore {
         return res.ok;
     }
 
+    async deleteTrade(name) {
+        const res = await fetch(`${this.apiBase}/trades/${encodeURIComponent(name)}`, {
+            method: 'DELETE',
+            headers: this.getHeaders()
+        });
+        return res.ok;
+    }
+
     async getAllSites() {
         const res = await fetch(`${this.apiBase}/sites`);
         return res.json();

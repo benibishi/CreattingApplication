@@ -137,6 +137,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (STORAGE_MODE !== 'local') return res.status(400).json({ error: 'Not in local mode' });
     try {
         const { email, password } = req.body;
+        console.log(`[AUTH] LOGIN ATTEMPT: ${email}`);
         const db = getLocalDB();
         
         const cleanInput = (email || '').trim().toLowerCase();
@@ -146,11 +147,19 @@ app.post('/api/auth/login', async (req, res) => {
             return cleanEmail === cleanInput || cleanUsername === cleanInput;
         });
         
-        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!user) {
+            console.log(`[AUTH] LOGIN FAILED: USER NOT FOUND (${cleanInput})`);
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
         // Compare Hashed Password
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!isMatch) {
+            console.log(`[AUTH] LOGIN FAILED: INCORRECT PASSWORD FOR ${user.email}`);
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        console.log(`[AUTH] LOGIN SUCCESS: ${user.email} (ROLE: ${user.role})`);
 
         // Generate Token
         const token = jwt.sign({ 
@@ -160,7 +169,13 @@ app.post('/api/auth/login', async (req, res) => {
         }, JWT_SECRET, { expiresIn: '24h' });
 
         res.json({ 
-            user: { id: user.id, username: user.username, email: user.email, role: user.role, full_name: user.full_name }, 
+            user: { 
+                id: user.id, 
+                username: user.username || user.email.split('@')[0], 
+                email: user.email, 
+                role: user.role, 
+                full_name: user.full_name 
+            }, 
             token 
         });
     } catch (err) {
@@ -514,6 +529,24 @@ app.post('/api/trades', async (req, res) => {
             }
             res.json({ name });
         }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// TRADES: Delete
+app.delete('/api/trades/:name', async (req, res) => {
+    try {
+        const { name } = req.params;
+        if (STORAGE_MODE === 'supabase') {
+            const { error } = await supabase.from('trades').delete().eq('name', name);
+            if (error) throw error;
+        } else {
+            const db = getLocalDB();
+            db.trades = db.trades.filter(t => t !== name);
+            saveLocalDB(db);
+        }
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

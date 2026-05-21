@@ -238,7 +238,7 @@ const UI = {
             this.loginNavBtn.onclick = async () => {
                 await store.logout();
                 setCurrentUser(null);
-                window.location.hash = '#home';
+                window.location.hash = '#admin-login';
                 this.updateNav();
             };
             
@@ -275,10 +275,8 @@ async function handleRouting() {
         store.initialized = true;
     }
 
-    // Check session on every route change if not already set
-    if (!currentUser) {
-        currentUser = await store.getCurrentSession();
-    }
+    // Sync session on every route change
+    currentUser = await store.getCurrentSession();
 
     console.log('[ROUTING] HASH:', hash, '| USER:', currentUser ? currentUser.username : 'GUEST');
     
@@ -310,17 +308,23 @@ async function handleRouting() {
     } else if (hash.startsWith('#poster-')) {
         const siteId = hash.replace('#poster-', '');
         renderPoster(siteId);
+    } else if (hash === '#home' || !hash) {
+        renderHome();
     } else {
-        const sites = await store.getAllSites();
-        if (sites.length === 0) {
-            renderSetupRequired();
-        } else if (sites.length === 1) {
-            window.location.hash = `#${sites[0].id}`;
-        } else {
-            renderSiteSelection(sites);
-        }
+        window.location.hash = '#home';
     }
     UI.updateNav();
+}
+
+/**
+ * HOME VIEW
+ */
+function renderHome() {
+    UI.render('tpl-home');
+    const loginBtn = document.getElementById('home-login-btn');
+    if (loginBtn) {
+        loginBtn.onclick = () => window.location.hash = '#admin-login';
+    }
 }
 
 /**
@@ -382,6 +386,7 @@ async function refreshITOverview() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#aaa' } },
                     x: { grid: { display: false }, ticks: { color: '#aaa' } }
@@ -412,6 +417,7 @@ async function refreshITOverview() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'right', labels: { color: '#aaa', font: { family: 'JetBrains Mono', size: 10 } } }
                 }
@@ -651,6 +657,7 @@ async function refreshITSites() {
  */
 function renderAdminLogin() {
     UI.render('tpl-admin-pin');
+    const form = document.getElementById('admin-login-form');
     const userInp = document.getElementById('admin-user-input');
     const pinInp = document.getElementById('admin-pin-input');
     const loginBtn = document.getElementById('admin-login-btn');
@@ -672,7 +679,8 @@ function renderAdminLogin() {
         };
     }
 
-    loginBtn.onclick = async () => {
+    form.onsubmit = async (e) => {
+        e.preventDefault();
         try {
             loginBtn.disabled = true;
             loginBtn.textContent = 'AUTHENTICATING...';
@@ -776,22 +784,31 @@ async function renderProfile() {
     const err = document.getElementById('profile-error');
 
     // Populate current data
-    // We need to get the full user object from the server to get the full name
-    try {
-        const users = await store.getAllUsers();
-        const fullUser = users.find(u => u.id === currentUser.id);
-        if (fullUser) {
-            fullNameInp.value = fullUser.full_name;
-            usernameInp.value = fullUser.username;
-            emailInp.value = fullUser.email;
-            roleInp.value = fullUser.role.toUpperCase();
+    if (!currentUser) {
+        window.location.hash = '#admin-login';
+        return;
+    }
+
+    // Display basic info from session first
+    fullNameInp.value = currentUser.full_name || '';
+    usernameInp.value = currentUser.username || '';
+    emailInp.value = currentUser.email || '';
+    roleInp.value = (currentUser.role || 'supervisor').toUpperCase();
+
+    // If IT Admin, we can try to get more detailed info, but it's optional
+    if (currentUser.role === 'it-admin') {
+        try {
+            const users = await store.getAllUsers();
+            const fullUser = users.find(u => u.id === currentUser.id);
+            if (fullUser) {
+                fullNameInp.value = fullUser.full_name;
+                usernameInp.value = fullUser.username;
+                emailInp.value = fullUser.email;
+                roleInp.value = fullUser.role.toUpperCase();
+            }
+        } catch (e) {
+            console.error('Optional profile data fetch failed:', e);
         }
-    } catch (e) {
-        console.error('Error fetching full user data:', e);
-        fullNameInp.value = currentUser.full_name || '';
-        usernameInp.value = currentUser.username;
-        emailInp.value = currentUser.email;
-        roleInp.value = currentUser.role.toUpperCase();
     }
 
     form.onsubmit = async (e) => {
@@ -1002,15 +1019,34 @@ async function renderAdminTrades() {
     const trades = await store.getTrades();
     
     list.innerHTML = trades.map(t => `
-        <div class="site-mini-card" style="display:flex; justify-content:space-between; align-items:center">
-            <strong>${t.toUpperCase()}</strong>
+        <div class="site-mini-card" style="display:flex; justify-content:center; align-items:center; padding: 25px 15px; text-align: center;">
+            <strong style="font-size: 0.9rem; letter-spacing: 1px;">${t.toUpperCase()}</strong>
+            <button class="delete-corner-btn" title="DELETE TRADE" onclick="confirmDeleteTrade('${t}')">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     `).join('');
 
-    document.getElementById('add-trade-btn').onclick = async () => {
-        const name = document.getElementById('new-trade-name').value;
+    window.confirmDeleteTrade = async (tradeName) => {
+        if (confirm(`DELETE TRADE: "${tradeName.toUpperCase()}"?`)) {
+            const ok = await store.deleteTrade(tradeName);
+            if (ok) {
+                SoundEngine.playSuccess();
+                renderAdminTrades();
+            } else {
+                SoundEngine.playAlarm();
+                alert("FAILED TO DELETE TRADE");
+            }
+        }
+    };
+
+    document.getElementById('add-trade-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const nameInp = document.getElementById('new-trade-name');
+        const name = nameInp.value.trim();
         if (name) {
             await store.addTrade(name);
+            nameInp.value = '';
             renderAdminTrades();
         }
     };

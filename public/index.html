@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
@@ -22,6 +23,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+    <!-- Glowing Fluid Background Blobs -->
+    <div class="glass-bg-blobs" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="blob blob-4"></div>
+        <div class="blob blob-5"></div>
+    </div>
+
     <header class="rugged-header">
         <h1>CONSTRUCTION HUB</h1>
         <div class="header-controls">
@@ -72,23 +82,25 @@
         <section class="view admin-pin">
             <h2 class="section-title">SUPERVISOR LOGIN</h2>
             <div class="rugged-card">
-                <div class="form-group">
-                    <label>USERNAME</label>
-                    <input type="text" id="admin-user-input" class="rugged-input" placeholder="Enter Username">
-                </div>
-                <div class="form-group">
-                    <label>PASSWORD</label>
-                    <div class="pin-input-container">
-                        <input type="password" id="admin-pin-input" placeholder="Enter Password" class="rugged-input">
-                        <button type="button" id="pin-toggle-btn" class="pin-toggle">SHOW</button>
+                <form id="admin-login-form">
+                    <div class="form-group">
+                        <label>USERNAME</label>
+                        <input type="text" id="admin-user-input" class="rugged-input" placeholder="Enter Username" required>
                     </div>
-                </div>
-                
-                <div id="auth-actions">
-                    <button id="admin-login-btn" class="rugged-button primary">SIGN IN</button>
-                    <p style="text-align: center; margin: 1rem 0; font-size: 0.8rem; color: #888;">NEW SUPERVISOR?</p>
-                    <button id="go-to-register-btn" class="rugged-button secondary small">CREATE NEW ACCOUNT</button>
-                </div>
+                    <div class="form-group">
+                        <label>PASSWORD</label>
+                        <div class="pin-input-container">
+                            <input type="password" id="admin-pin-input" placeholder="Enter Password" class="rugged-input" required>
+                            <button type="button" id="pin-toggle-btn" class="pin-toggle">SHOW</button>
+                        </div>
+                    </div>
+                    
+                    <div id="auth-actions">
+                        <button type="submit" id="admin-login-btn" class="rugged-button primary">SIGN IN</button>
+                        <p style="text-align: center; margin: 1rem 0; font-size: 0.8rem; color: #888;">NEW SUPERVISOR?</p>
+                        <button type="button" id="go-to-register-btn" class="rugged-button secondary small">CREATE NEW ACCOUNT</button>
+                    </div>
+                </form>
 
                 <p id="auth-error" class="error-text hidden">INVALID CREDENTIALS // ACCESS DENIED</p>
             </div>
@@ -136,7 +148,7 @@
                 </div>
                 
                 <div class="log-table-container">
-                    <table class="rugged-table">
+                    <table class="rugged-table headcount-table">
                         <thead>
                             <tr>
                                 <th>NAME</th>
@@ -150,7 +162,7 @@
                     </table>
                 </div>
 
-                <div class="no-print screen-controls" style="margin-top: 2rem; display: flex; gap: 10px;">
+                <div class="no-print screen-controls" style="margin-top: 2rem;">
                     <button class="rugged-button secondary" id="back-to-dashboard" onclick="goBackToDashboard()">BACK TO DASHBOARD</button>
                     <button class="rugged-button primary" id="export-csv-btn">
                         <i class="fas fa-file-csv"></i> EXPORT TO CSV
@@ -178,7 +190,7 @@
             
             <div id="active-sites-view" class="tab-content">
                 <div id="active-sites-container" class="tactical-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div class="header-row-responsive" style="margin-bottom: 1.5rem;">
                         <h3 class="sidebar-title" style="margin-bottom: 0;">CURRENT SITES</h3>
                         <button id="enable-notifications-btn" class="rugged-button small primary" style="margin: 0; width: auto; font-size: 0.6rem;">
                             <i class="fas fa-bell"></i> ENABLE SITE ALERTS
@@ -291,13 +303,15 @@
                 <div class="tactical-container">
                     <h3 class="sidebar-title">MANAGE TRADE LIST</h3>
                     
-                    <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 2rem;">
-                        <input type="text" id="new-trade-name" class="rugged-input" placeholder="ENTER NEW TRADE NAME" style="flex: 1;">
-                        <button id="add-trade-btn" class="rugged-button primary small" style="margin-bottom: 0; width: auto;">ADD TRADE</button>
-                    </div>
+                    <form id="add-trade-form" class="form-group flex-responsive-group" style="margin-bottom: 2rem;">
+                        <input type="text" id="new-trade-name" class="rugged-input" placeholder="ENTER NEW TRADE NAME" style="flex: 1;" required>
+                        <button type="submit" id="add-trade-btn" class="rugged-button primary small" style="margin-bottom: 0; width: auto;">ADD TRADE</button>
+                    </form>
 
-                    <div id="trades-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-                        <!-- Trades injected here -->
+                    <div class="scrollable-list-container">
+                        <div id="trades-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                            <!-- Trades injected here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -340,21 +354,25 @@
                     </div>
                 </div>
 
-                <div class="charts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="charts-container">
                     <div class="rugged-card">
                         <h3 class="sidebar-title">SIGN-INS PER SITE (LAST 7 DAYS)</h3>
-                        <canvas id="sites-bar-chart"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="sites-bar-chart"></canvas>
+                        </div>
                     </div>
                     <div class="rugged-card">
                         <h3 class="sidebar-title">WORKER DISTRIBUTION BY TRADE</h3>
-                        <canvas id="trades-pie-chart"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="trades-pie-chart"></canvas>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="tactical-container">
                     <h3 class="sidebar-title">GLOBAL ACTIVITY FEED</h3>
                     <div class="log-table-container">
-                        <table class="rugged-table">
+                        <table class="rugged-table activity-feed-table">
                             <thead>
                                 <tr>
                                     <th>SITE</th>
@@ -403,7 +421,7 @@
                 <div class="tactical-container">
                     <h3 class="sidebar-title">REGISTERED SUPERVISORS</h3>
                     <div class="log-table-container">
-                        <table class="rugged-table">
+                        <table class="rugged-table supervisors-table">
                             <thead>
                                 <tr>
                                     <th>USERNAME / NAME</th>
@@ -451,7 +469,7 @@
                 <div class="tactical-container">
                     <h3 class="sidebar-title">MANAGED SITES</h3>
                     <div class="log-table-container">
-                        <table class="rugged-table">
+                        <table class="rugged-table managed-sites-table">
                             <thead>
                                 <tr>
                                     <th>SITE NAME</th>
@@ -473,7 +491,7 @@
                 <div class="tactical-container">
                     <h3 class="sidebar-title">DATA MANAGEMENT</h3>
                     <p style="margin-bottom: 2rem; color: #aaa;">Export all system data to a JSON file for backup or restore it from a previously saved file.</p>
-                    <div style="display: flex; gap: 1rem;">
+                    <div class="screen-controls">
                         <button id="it-export-btn" class="rugged-button secondary">
                             <i class="fas fa-download"></i> EXPORT BACKUP
                         </button>
@@ -606,7 +624,10 @@
                         <input type="text" id="profile-role" class="rugged-input" readonly style="opacity: 0.7;">
                     </div>
                     
-                    <button type="submit" id="save-profile-btn" class="rugged-button primary">SAVE CHANGES</button>
+                    <div class="screen-controls" style="margin-top: 1.5rem;">
+                        <button type="submit" id="save-profile-btn" class="rugged-button primary">SAVE CHANGES</button>
+                        <button type="button" class="rugged-button secondary" onclick="goBackToDashboard()">BACK TO DASHBOARD</button>
+                    </div>
                     <p id="profile-msg" class="success-text hidden">CHANGES SAVED SUCCESSFULLY</p>
                     <p id="profile-error" class="error-text hidden">ERROR SAVING CHANGES</p>
                 </form>

@@ -3,7 +3,7 @@
     {
       "id": "u-admin123",
       "email": "admin@construction.com",
-      "password": "adminpassword",
+      "password": "$2b$10$ezK33VyT6EjYOGIp4iglFufbq4nu7tP9hJ4jeeorcMNaNEgxVVj5u",
       "full_name": "IT Administrator",
       "role": "it-admin",
       "created_at": "2026-05-20T00:00:00.000Z"
@@ -11,7 +11,7 @@
     {
       "id": "u-hpwwg4m6t",
       "email": "john@hotmail.comq",
-      "password": "12345",
+      "password": "$2b$10$NZ.I4WvUheMX3W/E/TCfzu.IYc7c43vTRZK/Z/1RMBWN7gB3ndwcG",
       "full_name": "john",
       "role": "supervisor",
       "created_at": "2026-05-20T05:29:51.291Z"
@@ -19,7 +19,7 @@
     {
       "id": "u-uc5s3h47a",
       "email": "bentheframer@gmail.com",
-      "password": "12345",
+      "password": "$2b$10$NZ.I4WvUheMX3W/E/TCfzu.IYc7c43vTRZK/Z/1RMBWN7gB3ndwcG",
       "full_name": "ben the framer",
       "role": "supervisor",
       "created_at": "2026-05-20T05:32:07.777Z"
@@ -28,7 +28,7 @@
       "id": "u-xqhkfhvv4",
       "email": "ooran@ooran.com",
       "username": "ooran",
-      "password": "1234",
+      "password": "$2b$10$pM0jfnmaxm3Fnyz4vZyN2e/wqIRkRjoAGxFol2lb.ngMPuIUV.XUa",
       "full_name": "ooran",
       "role": "supervisor",
       "created_at": "2026-05-20T05:35:15.437Z"
@@ -45,6 +45,39 @@
       "map_pin_x": null,
       "map_pin_y": null,
       "created_at": "2026-05-20T05:37:20.365Z"
+    },
+    {
+      "id": "site-yk07j3pnn",
+      "name": "heartwood",
+      "email": "bentheFramer@gmail.com",
+      "map_url": null,
+      "office_url": null,
+      "owner_id": "u-uc5s3h47a",
+      "map_pin_x": null,
+      "map_pin_y": null,
+      "created_at": "2026-05-21T02:38:38.925Z"
+    },
+    {
+      "id": "site-kw3get55g",
+      "name": "livingston",
+      "email": "ooran@gmail.com",
+      "map_url": null,
+      "office_url": null,
+      "owner_id": "u-xqhkfhvv4",
+      "map_pin_x": null,
+      "map_pin_y": null,
+      "created_at": "2026-05-21T02:40:55.260Z"
+    },
+    {
+      "id": "site-lazzjd43g",
+      "name": "rangeview",
+      "email": "ooran@gmail.com",
+      "map_url": null,
+      "office_url": null,
+      "owner_id": "u-xqhkfhvv4",
+      "map_pin_x": null,
+      "map_pin_y": null,
+      "created_at": "2026-05-21T02:41:07.777Z"
     }
   ],
   "signins": [
@@ -64,9 +97,11 @@
     "Plumber",
     "Carpenter",
     "Machine Operator",
-    "Scaffolder",
-    "Steel Fixer",
-    "Supervisor",
-    "Other"
+    "Other",
+    "HVAC",
+    "Sider",
+    "roofer",
+    "Excavator",
+    "Framer"
   ]
 }
