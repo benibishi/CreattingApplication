@@ -89,6 +89,15 @@
       "company": "Ooran Enterprises inc",
       "trade_type": "Other",
       "timestamp": "2026-05-20T06:07:32.508Z"
+    },
+    {
+      "id": "log-y3re8t1hv",
+      "site_id": "site-lazzjd43g",
+      "first_name": "sds",
+      "last_name": "sds",
+      "company": "sds",
+      "trade_type": "Sider",
+      "timestamp": "2026-05-21T04:11:41.950Z"
     }
   ],
   "trades": [
@@ -103,5 +112,6 @@
     "roofer",
     "Excavator",
     "Framer"
-  ]
+  ],
+  "issues": []
 }

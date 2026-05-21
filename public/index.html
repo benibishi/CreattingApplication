@@ -9,6 +9,7 @@
     <meta name="format-detection" content="telephone=no">
     <meta name="theme-color" content="#0f1115">
     <title>SITE SIGN-IN | Construction Hub</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
@@ -21,8 +22,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- QR Code Library CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <meta name="description" content="Construction site management system for tracking worker sign-ins, ensuring safety compliance, and real-time headcount monitoring.">
 </head>
 <body>
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner">
+        <i class="fas fa-wifi-slash"></i> YOU ARE OFFLINE — SIGN-INS WILL BE QUEUED
+    </div>
     <!-- Glowing Fluid Background Blobs -->
     <div class="glass-bg-blobs" aria-hidden="true">
         <div class="blob blob-1"></div>
@@ -37,6 +43,11 @@
         <div class="header-controls">
             <!-- Tactical Controls -->
             <div class="tactical-controls no-print">
+                <select id="lang-selector" class="lang-selector" title="Language">
+                    <option value="en">EN</option>
+                    <option value="es">ES</option>
+                    <option value="fr">FR</option>
+                </select>
                 <button id="theme-toggle-btn" class="sound-toggle-btn" title="THEME TOGGLE">
                     <i class="fas fa-sun"></i> DAYLIGHT MODE: OFF
                 </button>
@@ -142,17 +153,29 @@
         <section class="view live-logs">
             <h2 class="section-title">LIVE HEADCOUNT</h2>
             <div class="rugged-card">
-                <div class="headcount-hero">
-                    <span class="label">CURRENT ON SITE:</span>
-                    <span id="log-count" class="count-value">0</span>
+                <div class="headcount-dual">
+                    <div class="headcount-box active">
+                        <span class="label">CURRENT ON SITE</span>
+                        <span id="log-count-active" class="count-value">0</span>
+                    </div>
+                    <div class="headcount-box total">
+                        <span class="label">TOTAL TODAY</span>
+                        <span id="log-count-total" class="count-value">0</span>
+                    </div>
                 </div>
                 
+                <div class="search-input-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="log-search" class="search-input" placeholder="Search by name or company...">
+                </div>
+
                 <div class="log-table-container">
                     <table class="rugged-table headcount-table">
                         <thead>
                             <tr>
                                 <th>NAME</th>
                                 <th>COMPANY</th>
+                                <th>STATUS</th>
                                 <th>TIME</th>
                             </tr>
                         </thead>
@@ -185,6 +208,9 @@
                 </button>
                 <button class="tab-btn" onclick="window.location.hash='#admin-trades'">
                     <i class="fas fa-tags"></i> TRADES
+                </button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-incidents'">
+                    <i class="fas fa-exclamation-triangle"></i> INCIDENTS
                 </button>
             </nav>
             
@@ -355,6 +381,12 @@
                 </div>
 
                 <div class="charts-container">
+                    <div class="rugged-card" style="grid-column: span 2;">
+                        <h3 class="sidebar-title">DAILY SIGN-INS TREND (LAST 7 DAYS)</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="daily-line-chart"></canvas>
+                        </div>
+                    </div>
                     <div class="rugged-card">
                         <h3 class="sidebar-title">SIGN-INS PER SITE (LAST 7 DAYS)</h3>
                         <div class="chart-wrapper">
@@ -541,15 +573,7 @@
                         <label>TRADE / DISCIPLINE</label>
                         <select id="trade-type" required class="rugged-input">
                             <option value="" disabled selected>-- SELECT TRADE --</option>
-                            <option value="General Labour">General Labour</option>
-                            <option value="Electrician">Electrician</option>
-                            <option value="Plumber">Plumber</option>
-                            <option value="Carpenter">Carpenter</option>
-                            <option value="Operator">Machine Operator</option>
-                            <option value="Scaffolder">Scaffolder</option>
-                            <option value="Steel Fixer">Steel Fixer</option>
-                            <option value="Supervisor">Supervisor / Management</option>
-                            <option value="Other">Other / Specialist</option>
+                            <!-- Trades loaded dynamically from API -->
                         </select>
                     </div>
                     <div class="form-group">
@@ -559,6 +583,26 @@
                             <button type="button" class="rugged-button choice-btn" data-value="no">NO</button>
                         </div>
                     </div>
+                    
+                    <div id="ppe-section" class="ppe-checklist hidden">
+                        <p style="font-size: 0.7rem; color: #888; margin-bottom: 1rem; letter-spacing: 1px;">REQUIRED PPE CHECKLIST:</p>
+                        <label class="ppe-item">
+                            <input type="checkbox" id="ppe-helmet" required>
+                            <i class="fas fa-helmet-safety"></i>
+                            <span>HARD HAT / HELMET</span>
+                        </label>
+                        <label class="ppe-item">
+                            <input type="checkbox" id="ppe-vest" required>
+                            <i class="fas fa-vest"></i>
+                            <span>HIGH-VISIBILITY VEST</span>
+                        </label>
+                        <label class="ppe-item">
+                            <input type="checkbox" id="ppe-boots" required>
+                            <i class="fas fa-boot-heeled"></i>
+                            <span>STEEL TOE BOOTS</span>
+                        </label>
+                    </div>
+
                     <button type="submit" id="submit-signin" class="rugged-button primary hidden">SIGN IN</button>
                 </form>
             </div>
@@ -593,7 +637,12 @@
                     <p><strong>TIME:</strong> <span id="summary-time"></span></p>
                 </div>
                 <p>Stay safe on site today.</p>
+                <div class="signout-section">
+                    <p style="font-size: 0.75rem; color: var(--label-color); margin-bottom: 0.75rem;">WHEN LEAVING THE SITE:</p>
+                    <button id="signout-btn" class="rugged-button"><i class="fas fa-sign-out-alt"></i> SIGN OUT</button>
+                </div>
                 <button id="success-done-btn" class="rugged-button primary" style="margin-top: 1rem;">DONE</button>
+                <button id="report-issue-btn" class="rugged-button secondary small" style="margin-top: 0.5rem;"><i class="fas fa-exclamation-triangle"></i> REPORT SAFETY ISSUE</button>
             </div>
         </section>
     </template>
@@ -635,7 +684,75 @@
         </section>
     </template>
 
+    <!-- Incidents Template -->
+    <template id="tpl-incidents">
+        <section class="view incidents-view">
+            <h2 id="incidents-site-name" class="section-title">INCIDENTS</h2>
+            <div class="tactical-container">
+                <div class="header-row-responsive" style="margin-bottom: 1.5rem;">
+                    <h3 class="sidebar-title">OPEN INCIDENTS: <span id="incidents-open-count" style="color: var(--hazard-red);">0</span></h3>
+                    <button class="rugged-button small secondary" onclick="goBackToDashboard()"><i class="fas fa-arrow-left"></i> BACK</button>
+                </div>
+                <div id="incidents-list">
+                    <!-- Incidents injected here -->
+                </div>
+                <div class="incident-form-container">
+                    <h3 class="sidebar-title">REPORT NEW INCIDENT</h3>
+                    <form id="incident-form">
+                        <div class="form-group">
+                            <label>DESCRIPTION</label>
+                            <textarea id="incident-desc" class="rugged-input" rows="3" placeholder="Describe the safety issue..." required style="resize: vertical; min-height: 80px;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>SEVERITY</label>
+                            <select id="incident-severity" class="rugged-input" required>
+                                <option value="low">LOW — Minor concern</option>
+                                <option value="medium" selected>MEDIUM — Needs attention</option>
+                                <option value="high">HIGH — Immediate risk</option>
+                                <option value="critical">CRITICAL — Stop work</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="rugged-button primary"><i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>SUBMIT REPORT</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Admin Incidents Tab Template -->
+    <template id="tpl-admin-incidents">
+        <section class="view admin-dashboard">
+            <h2 class="section-title">INCIDENT MANAGEMENT</h2>
+            <nav class="tactical-tabs">
+                <button class="tab-btn" onclick="window.location.hash='#admin-sites'"><i class="fas fa-list-ul"></i> ACTIVE SITES</button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-setup'"><i class="fas fa-tools"></i> SITE SETUP</button>
+                <button class="tab-btn" onclick="window.location.hash='#admin-trades'"><i class="fas fa-tags"></i> TRADES</button>
+                <button class="tab-btn active" onclick="window.location.hash='#admin-incidents'"><i class="fas fa-exclamation-triangle"></i> INCIDENTS</button>
+            </nav>
+            <div class="tactical-container">
+                <h3 class="sidebar-title">SELECT SITE TO VIEW INCIDENTS</h3>
+                <select id="incident-site-select" class="rugged-input" style="margin-bottom: 1.5rem;">
+                    <option value="" disabled selected>-- SELECT SITE --</option>
+                </select>
+                <div id="admin-incidents-list">
+                    <div class="empty-state"><p>SELECT A SITE TO VIEW INCIDENTS</p></div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script src="js/store.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/modals.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/itadmin.js"></script>
+    <script src="js/signin.js"></script>
+    <script src="js/incidents.js"></script>
+    <script src="js/profile.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

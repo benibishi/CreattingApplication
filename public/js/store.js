@@ -266,6 +266,43 @@ class DataStore {
         });
         return res.ok;
     }
+
+    async checkoutSignIn(signInId) {
+        const res = await fetch(`${this.apiBase}/signins/${signInId}/checkout`, {
+            method: 'PATCH', headers: this.getHeaders()
+        });
+        return res.json();
+    }
+
+    async getOnSiteWorkers(siteId) {
+        const res = await fetch(`${this.apiBase}/signins?siteId=${siteId}&status=checked_in`);
+        return res.json();
+    }
+
+    async createIssue(issueData) {
+        const res = await fetch(`${this.apiBase}/issues`, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(issueData)
+        });
+        return res.json();
+    }
+
+    async getIssues(siteId) {
+        let url = `${this.apiBase}/issues`;
+        if (siteId) url += `?siteId=${siteId}`;
+        const res = await fetch(url);
+        return res.json();
+    }
+
+    async resolveIssue(issueId) {
+        const res = await fetch(`${this.apiBase}/issues/${issueId}`, {
+            method: 'PATCH',
+            headers: this.getHeaders(),
+            body: JSON.stringify({ status: 'resolved' })
+        });
+        return res.json();
+    }
 }
 
 const store = new DataStore();
